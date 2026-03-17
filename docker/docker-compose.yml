@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7
+    container_name: wargahub-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: wargahub
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - wargahub-network
+
+  # Backend API
+  backend:
+    build:
+      context: ../apps/backend
+      dockerfile: ../../docker/backend.Dockerfile
+    container_name: wargahub-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      MONGODB_URI: mongodb://mongodb:27017/wargahub
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-in-production}
+      CORS_ORIGIN: http://localhost
+    depends_on:
+      - mongodb
+    volumes:
+      - backend_uploads:/app/uploads
+    networks:
+      - wargahub-network
+
+  # Frontend
+  frontend:
+    build:
+      context: ../apps/frontend
+      dockerfile: ../../docker/frontend.Dockerfile
+    container_name: wargahub-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - wargahub-network
+
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  backend_uploads:
+    driver: local
+
+networks:
+  wargahub-network:
+    driver: bridge

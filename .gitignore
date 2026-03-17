@@ -1,0 +1,66 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+.sublime-*
+
+# Testing
+coverage/
+.nyc_output/
+
+# Uploads
+uploads/
+temp/
+
+# Docker
+.dockerignore
+
+# TypeScript
+*.tsbuildinfo
+
+# Claude Code
+.claude/
+
+# Misc
+.cache/
+*.bak
+*.tmp
+nul
+apps/backend/node_modules
+apps/backend/.env
+apps/backend/dist
+
+apps/frontend/node_modules
+apps/frontend/.env
+apps/frontend/dist

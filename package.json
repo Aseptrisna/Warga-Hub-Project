@@ -1,0 +1,32 @@
+{
+  "name": "wargahub",
+  "version": "1.0.0",
+  "description": "Platform Digital RT/RW/Desa untuk digitalisasi layanan administrasi",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:backend": "npm run start:dev --workspace=apps/backend",
+    "dev:frontend": "npm run dev --workspace=apps/frontend",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:backend": "npm run build --workspace=apps/backend",
+    "build:frontend": "npm run build --workspace=apps/frontend",
+    "build": "npm run build:backend && npm run build:frontend",
+    "seed": "npm run seed:run --workspace=apps/backend",
+    "seed:clear": "npm run seed:clear --workspace=apps/backend",
+    "docker:up": "docker-compose -f docker/docker-compose.yml up -d",
+    "docker:down": "docker-compose -f docker/docker-compose.yml down",
+    "docker:build": "docker-compose -f docker/docker-compose.yml build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "author": "WargaHub Team",
+  "license": "MIT"
+}
