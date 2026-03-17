@@ -194,7 +194,7 @@ export default function WargaActivationPage() {
                         {user.rt && <span> / RT {user.rt}</span>}
                       </p>
                       <p className="text-xs text-gray-400">
-                        Mendaftar: {format(new Date(user.createdAt), 'dd MMM yyyy HH:mm')}
+                        Mendaftar: {user.createdAt && !isNaN(new Date(user.createdAt).getTime()) ? format(new Date(user.createdAt), 'dd MMM yyyy HH:mm') : '-'}
                       </p>
                     </div>
                   </div>
