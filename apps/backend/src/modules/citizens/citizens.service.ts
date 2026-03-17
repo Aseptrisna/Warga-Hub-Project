@@ -121,6 +121,14 @@ export class CitizensService {
     return citizen;
   }
 
+  async findByNik(nik: string) {
+    const citizen = await this.citizenModel.findOne({ nik });
+    if (!citizen) {
+      throw new NotFoundException('Data warga tidak ditemukan');
+    }
+    return citizen;
+  }
+
   async update(id: string, updateCitizenDto: UpdateCitizenDto, user?: any) {
     const citizen = await this.citizenModel.findOne({ _id: id });
     if (!citizen) {

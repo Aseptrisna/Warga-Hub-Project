@@ -16,7 +16,19 @@ export enum LetterStatus {
   REJECTED = 'rejected',
 }
 
-@Schema()
+@Schema({
+  timestamps: true,
+  versionKey: false,
+  toJSON: {
+    virtuals: true,
+    transform: (_doc: any, ret: any) => {
+      ret.id = ret._id;
+      delete ret._id;
+      delete ret.__v;
+      return ret;
+    },
+  },
+})
 export class Letter extends BaseSchema {
   @Prop({ required: true })
   letterNumber: string; // Auto-generated: 001/SKD/RT.01/XII/2026

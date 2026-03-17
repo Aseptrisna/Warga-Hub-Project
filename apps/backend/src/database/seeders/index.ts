@@ -91,6 +91,34 @@ async function runSeeders() {
     // 3. Citizens (500 warga)
     await seedCitizensComprehensive(CitizenModel);
 
+    // 3b. Link warga user to citizen record
+    // Use updateOne to avoid triggering pre-save hook (which would re-hash password)
+    console.log('🔗 Linking warga user to citizen record...');
+    const wargaUser = await UserModel.findOne({ email: 'warga@wargahub.id' });
+    if (wargaUser && !wargaUser.citizenId) {
+      const matchedCitizen = await CitizenModel.findOne({
+        rt: '01',
+        rw: '01',
+        statusHubunganDalamKeluarga: 'Kepala Keluarga',
+        userId: { $exists: false },
+      });
+      if (matchedCitizen) {
+        await UserModel.updateOne(
+          { _id: wargaUser._id },
+          { $set: { citizenId: matchedCitizen._id, nik: matchedCitizen.nik, name: matchedCitizen.namaLengkap } },
+        );
+        await CitizenModel.updateOne(
+          { _id: matchedCitizen._id },
+          { $set: { userId: wargaUser._id } },
+        );
+        console.log(`✅ Linked warga user to citizen: ${matchedCitizen.namaLengkap} (NIK: ${matchedCitizen.nik})`);
+      } else {
+        console.log('⚠️  No unlinked citizen found in RT 01 / RW 01');
+      }
+    } else if (wargaUser?.citizenId) {
+      console.log('⏭️  Warga user already linked to citizen');
+    }
+
     // 4. Families (derived from citizens)
     await seedFamilies(FamilyModel, CitizenModel);
 
@@ -98,7 +126,7 @@ async function runSeeders() {
     await seedIuranTypes(IuranTypeModel, UserModel);
 
     // 6. Payments (depends on citizens + iuran types)
-    await seedPayments(PaymentModel, CitizenModel, UserModel);
+    await seedPayments(PaymentModel, CitizenModel, UserModel, IuranTypeModel);
 
     // 7. Letter Templates
     await seedLetterTemplates(LetterTemplateModel);

@@ -3,7 +3,7 @@
  * Creates sample payment records for iuran warga
  */
 
-export const seedPayments = async (paymentModel: any, citizenModel: any, userModel: any) => {
+export const seedPayments = async (paymentModel: any, citizenModel: any, userModel: any, iuranTypeModel?: any) => {
   console.log('🌱 Seeding payments...');
 
   const admin = await userModel.findOne({ email: 'kaurkeuangan@wargahub.id' });
@@ -11,6 +11,24 @@ export const seedPayments = async (paymentModel: any, citizenModel: any, userMod
     console.log('⏭️  Skipping payments (admin user not found)');
     return;
   }
+
+  // Lookup iuran types from DB
+  let iuranTypesFromDb: any[] = [];
+  if (iuranTypeModel) {
+    iuranTypesFromDb = await iuranTypeModel.find({ isActive: true }).lean();
+  }
+
+  // Build iuran type map (name -> { id, jumlah })
+  const iuranTypeMap: Record<string, { id: string; nama: string; jumlah: number }> = {};
+  for (const t of iuranTypesFromDb) {
+    iuranTypeMap[t.nama] = { id: t._id, nama: t.nama, jumlah: t.jumlah };
+  }
+
+  // Fallback if no iuran types found
+  const iuranTypes = [
+    iuranTypeMap['Iuran Kebersihan'] || { id: 'type-kebersihan', nama: 'Iuran Kebersihan', jumlah: 25000 },
+    iuranTypeMap['Iuran Keamanan'] || { id: 'type-keamanan', nama: 'Iuran Keamanan', jumlah: 15000 },
+  ];
 
   // Get adult citizens (age >= 17)
   const cutoffDate = new Date();
@@ -28,11 +46,6 @@ export const seedPayments = async (paymentModel: any, citizenModel: any, userMod
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
-
-  const iuranTypes = [
-    { jenis: 'Iuran Kebersihan', jumlah: 25000 },
-    { jenis: 'Iuran Keamanan', jumlah: 15000 },
-  ];
 
   const statuses = ['Lunas', 'Lunas', 'Lunas', 'Lunas', 'Lunas', 'Lunas', // 60%
     'Belum Bayar', 'Belum Bayar', // 20%
@@ -64,7 +77,9 @@ export const seedPayments = async (paymentModel: any, citizenModel: any, userMod
         rt: citizen.rt,
         rw: citizen.rw,
         desa: citizen.desa,
-        jenis: iuran.jenis,
+        iuranTypeId: iuran.id,
+        iuranTypeName: iuran.nama,
+        jenis: iuran.nama,
         jumlah: iuran.jumlah,
         bulan: month,
         tahun: year,
@@ -82,14 +97,14 @@ export const seedPayments = async (paymentModel: any, citizenModel: any, userMod
     if (payments.length >= 250) break;
   }
 
-  // Batch insert
+  // Batch insert with upsert (using iuranTypeId in filter for unique index match)
   const BATCH_SIZE = 50;
   let created = 0;
   for (let i = 0; i < payments.length; i += BATCH_SIZE) {
     const batch = payments.slice(i, i + BATCH_SIZE);
     const ops = batch.map((p) => ({
       updateOne: {
-        filter: { citizenId: p.citizenId, bulan: p.bulan, tahun: p.tahun, jenis: p.jenis },
+        filter: { citizenId: p.citizenId, iuranTypeId: p.iuranTypeId, bulan: p.bulan, tahun: p.tahun },
         update: { $setOnInsert: p },
         upsert: true,
       },

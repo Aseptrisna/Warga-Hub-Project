@@ -13,15 +13,20 @@ export class PanicService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  async create(data: any, userId: string, userName: string) {
+  async create(data: any, user: any) {
     const alert = new this.panicModel({
       ...data,
-      pelaporId: userId,
-      pelaporName: userName,
+      pelaporId: user.id,
+      pelaporName: user.name,
+      desa: user.desa,
+      rw: user.rw,
+      rt: user.rt,
       status: PanicStatus.ACTIVE,
     });
     await alert.save();
 
+    const userId = user.id;
+    const userName = user.name;
     this.auditService.log({
       userId,
       userName,
@@ -49,9 +54,10 @@ export class PanicService {
   }
 
   async findAll(query?: any) {
-    const { page = 1, limit = 10, status, desa, rw, rt } = query || {};
+    const { page = 1, limit = 10, status, desa, rw, rt, pelaporId } = query || {};
     const filter: any = {};
 
+    if (pelaporId) filter.pelaporId = pelaporId;
     if (status) filter.status = status;
     if (desa) filter.desa = desa;
     if (rw) filter.rw = rw;

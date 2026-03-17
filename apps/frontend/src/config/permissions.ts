@@ -27,24 +27,22 @@ export const menuPermissions: MenuPermission[] = [
     ],
   },
   {
-    // Data Warga: Kasi view utk referensi pelayanan/kesejahteraan, Warga lihat data sendiri
+    // Data Warga: Kasi view utk referensi pelayanan/kesejahteraan (Warga akses profil via /my-profile)
     path: '/citizens',
     allowedRoles: [
       Role.SUPER_ADMIN, Role.ADMIN_PLATFORM, Role.ADMIN_DESA,
       Role.KEPALA_DESA, Role.SEKRETARIS_DESA, Role.KAUR_UMUM,
       Role.KASI_PEMERINTAHAN, Role.KASI_KESEJAHTERAAN, Role.KASI_PELAYANAN,
       Role.KETUA_RW, Role.ADMIN_RW, Role.KETUA_RT, Role.ADMIN_RT,
-      Role.WARGA,
     ],
   },
   {
-    // Kartu Keluarga: Warga lihat KK sendiri
+    // Kartu Keluarga: Warga akses data keluarga via /my-profile
     path: '/families',
     allowedRoles: [
       Role.SUPER_ADMIN, Role.ADMIN_PLATFORM, Role.ADMIN_DESA,
       Role.KEPALA_DESA, Role.SEKRETARIS_DESA, Role.KAUR_UMUM, Role.KASI_PEMERINTAHAN,
       Role.KETUA_RW, Role.ADMIN_RW, Role.KETUA_RT, Role.ADMIN_RT,
-      Role.WARGA,
     ],
   },
   {

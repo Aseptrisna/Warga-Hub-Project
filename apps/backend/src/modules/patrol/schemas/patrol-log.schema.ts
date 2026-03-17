@@ -11,7 +11,19 @@ export enum ScanStatus {
   DUPLICATE = 'duplicate', // Already scanned recently
 }
 
-@Schema({ timestamps: true, versionKey: false })
+@Schema({
+  timestamps: true,
+  versionKey: false,
+  toJSON: {
+    virtuals: true,
+    transform: (_doc: any, ret: any) => {
+      ret.id = ret._id;
+      delete ret._id;
+      delete ret.__v;
+      return ret;
+    },
+  },
+})
 export class PatrolLog extends BaseSchema {
   @Prop({ type: String, required: true })
   scheduleId: string; // Patrol schedule ID

@@ -76,6 +76,9 @@ export class PaymentsController {
   @Get('statistics')
   @ApiOperation({ summary: 'Get payment statistics' })
   getStatistics(@Query() filter: any, @CurrentUser() user: any) {
+    if (user.role === Role.WARGA) {
+      return this.service.getStatistics({ ...filter, citizenId: user.citizenId });
+    }
     const scope = getRegionScope(user);
     return this.service.getStatistics({ ...filter, ...scope });
   }

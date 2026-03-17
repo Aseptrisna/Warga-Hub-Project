@@ -1,5 +1,12 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller, Get, Post, Patch, Body, Param, Query,
+  UseGuards, UseInterceptors, UploadedFile,
+} from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import { v4 as uuidv4 } from 'uuid';
 import { PanicService } from './panic.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -8,6 +15,21 @@ import { Role } from '../../common/enums/role.enum';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { getRegionScope } from '../../common/helpers/region-scope.helper';
 
+const panicStorage = diskStorage({
+  destination: './uploads/panic',
+  filename: (_req, file, cb) => {
+    cb(null, `panic-${uuidv4()}${extname(file.originalname)}`);
+  },
+});
+
+const imageFilter = (_req: any, file: any, cb: any) => {
+  if (file.mimetype.match(/\/(jpg|jpeg|png|webp)$/)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only image files are allowed!'), false);
+  }
+};
+
 @ApiTags('panic')
 @Controller('panic')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -15,9 +37,36 @@ import { getRegionScope } from '../../common/helpers/region-scope.helper';
 export class PanicController {
   constructor(private readonly service: PanicService) {}
 
+  @Get('my')
+  getMyAlerts(@Query() query: any, @CurrentUser() user: any) {
+    return this.service.findAll({ ...query, pelaporId: user.id });
+  }
+
   @Post()
-  create(@Body() data: any, @CurrentUser() user: any) {
-    return this.service.create(data, user.id, user.name);
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('foto', {
+      storage: panicStorage,
+      fileFilter: imageFilter,
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  create(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() data: any,
+    @CurrentUser() user: any,
+  ) {
+    const fotoUrl = file ? `/uploads/panic/${file.filename}` : undefined;
+    // Parse lokasi if it's a JSON string (from FormData)
+    let lokasi = data.lokasi;
+    if (typeof lokasi === 'string') {
+      try {
+        lokasi = JSON.parse(lokasi);
+      } catch {
+        lokasi = { alamat: lokasi };
+      }
+    }
+    return this.service.create({ ...data, lokasi, fotoUrl }, user);
   }
 
   @Get()

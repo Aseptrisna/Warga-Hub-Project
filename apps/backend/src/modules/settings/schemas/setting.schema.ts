@@ -4,7 +4,19 @@ import { BaseSchema } from '../../../database/schemas/base.schema';
 
 export type SettingDocument = HydratedDocument<Setting>;
 
-@Schema()
+@Schema({
+  timestamps: true,
+  versionKey: false,
+  toJSON: {
+    virtuals: true,
+    transform: (_doc: any, ret: any) => {
+      ret.id = ret._id;
+      delete ret._id;
+      delete ret.__v;
+      return ret;
+    },
+  },
+})
 export class Setting extends BaseSchema {
   @Prop({ required: true, unique: true })
   key: string;

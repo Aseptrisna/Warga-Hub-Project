@@ -71,29 +71,52 @@ const CITIZEN_DELETE_ROLES = [
 export class CitizensController {
   constructor(private readonly citizensService: CitizensService) {}
 
+  // Helper: resolve citizen ID from user (citizenId or NIK fallback)
+  private async resolveCitizenId(user: any): Promise<string | null> {
+    if (user.citizenId) return user.citizenId;
+    if (user.nik) {
+      try {
+        const citizen = await this.citizensService.findByNik(user.nik);
+        return citizen?._id || null;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+
   // ============ MY PROFILE ENDPOINTS (Warga self-service) ============
 
   @Get('my-profile')
   @ApiOperation({ summary: 'Get my citizen profile (authenticated warga)' })
-  getMyProfile(@CurrentUser() user: any) {
-    if (!user.citizenId) {
+  async getMyProfile(@CurrentUser() user: any) {
+    const citizenId = await this.resolveCitizenId(user);
+    if (!citizenId) {
       return { message: 'Data kependudukan belum terhubung', data: null };
     }
-    return this.citizensService.findOne(user.citizenId);
+    return this.citizensService.findOne(citizenId);
   }
 
   @Patch('my-profile')
   @ApiOperation({ summary: 'Update limited fields of my profile' })
   async updateMyProfile(@CurrentUser() user: any, @Body() body: any) {
-    if (!user.citizenId) {
+    const citizenId = await this.resolveCitizenId(user);
+    if (!citizenId) {
       return { message: 'Data kependudukan belum terhubung', data: null };
     }
-    const allowed = { noTelp: body.noTelp, email: body.email, alamat: body.alamat };
+    const allowed = {
+      noTelp: body.noTelp,
+      email: body.email,
+      alamat: body.alamat,
+      npwp: body.npwp,
+      noBpjsKesehatan: body.noBpjsKesehatan,
+      noBpjsKetenagakerjaan: body.noBpjsKetenagakerjaan,
+    };
     const filtered: any = {};
     for (const [key, val] of Object.entries(allowed)) {
       if (val !== undefined) filtered[key] = val;
     }
-    return this.citizensService.update(user.citizenId, filtered);
+    return this.citizensService.update(citizenId, filtered);
   }
 
   @Post('my-profile/upload-photo')
@@ -101,9 +124,10 @@ export class CitizensController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { storage: citizenStorage, fileFilter: imageFilter, limits: { fileSize: 5 * 1024 * 1024 } }))
   async uploadMyPhoto(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
-    if (!user.citizenId) return { message: 'Data kependudukan belum terhubung' };
+    const citizenId = await this.resolveCitizenId(user);
+    if (!citizenId) return { message: 'Data kependudukan belum terhubung' };
     const fileUrl = `/uploads/citizens/${file.filename}`;
-    return this.citizensService.update(user.citizenId, { fotoUrl: fileUrl } as any);
+    return this.citizensService.update(citizenId, { fotoUrl: fileUrl } as any);
   }
 
   @Post('my-profile/upload-ktp')
@@ -111,9 +135,10 @@ export class CitizensController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { storage: citizenStorage, fileFilter: docFilter, limits: { fileSize: 5 * 1024 * 1024 } }))
   async uploadMyKtp(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
-    if (!user.citizenId) return { message: 'Data kependudukan belum terhubung' };
+    const citizenId = await this.resolveCitizenId(user);
+    if (!citizenId) return { message: 'Data kependudukan belum terhubung' };
     const fileUrl = `/uploads/citizens/${file.filename}`;
-    return this.citizensService.update(user.citizenId, { ktpUrl: fileUrl } as any);
+    return this.citizensService.update(citizenId, { ktpUrl: fileUrl } as any);
   }
 
   @Post('my-profile/upload-kk')
@@ -121,9 +146,10 @@ export class CitizensController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { storage: citizenStorage, fileFilter: docFilter, limits: { fileSize: 5 * 1024 * 1024 } }))
   async uploadMyKk(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
-    if (!user.citizenId) return { message: 'Data kependudukan belum terhubung' };
+    const citizenId = await this.resolveCitizenId(user);
+    if (!citizenId) return { message: 'Data kependudukan belum terhubung' };
     const fileUrl = `/uploads/citizens/${file.filename}`;
-    return this.citizensService.update(user.citizenId, { kkUrl: fileUrl } as any);
+    return this.citizensService.update(citizenId, { kkUrl: fileUrl } as any);
   }
 
   @Post('my-profile/upload-akta')
@@ -131,9 +157,10 @@ export class CitizensController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { storage: citizenStorage, fileFilter: docFilter, limits: { fileSize: 5 * 1024 * 1024 } }))
   async uploadMyAkta(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
-    if (!user.citizenId) return { message: 'Data kependudukan belum terhubung' };
+    const citizenId = await this.resolveCitizenId(user);
+    if (!citizenId) return { message: 'Data kependudukan belum terhubung' };
     const fileUrl = `/uploads/citizens/${file.filename}`;
-    return this.citizensService.update(user.citizenId, { aktaLahirUrl: fileUrl } as any);
+    return this.citizensService.update(citizenId, { aktaLahirUrl: fileUrl } as any);
   }
 
   @Post('my-profile/upload-surat-nikah')
@@ -141,9 +168,10 @@ export class CitizensController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { storage: citizenStorage, fileFilter: docFilter, limits: { fileSize: 5 * 1024 * 1024 } }))
   async uploadMySuratNikah(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
-    if (!user.citizenId) return { message: 'Data kependudukan belum terhubung' };
+    const citizenId = await this.resolveCitizenId(user);
+    if (!citizenId) return { message: 'Data kependudukan belum terhubung' };
     const fileUrl = `/uploads/citizens/${file.filename}`;
-    return this.citizensService.update(user.citizenId, { suratNikahUrl: fileUrl } as any);
+    return this.citizensService.update(citizenId, { suratNikahUrl: fileUrl } as any);
   }
 
   @Post('my-profile/upload-ijazah')
@@ -151,9 +179,10 @@ export class CitizensController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { storage: citizenStorage, fileFilter: docFilter, limits: { fileSize: 5 * 1024 * 1024 } }))
   async uploadMyIjazah(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
-    if (!user.citizenId) return { message: 'Data kependudukan belum terhubung' };
+    const citizenId = await this.resolveCitizenId(user);
+    if (!citizenId) return { message: 'Data kependudukan belum terhubung' };
     const fileUrl = `/uploads/citizens/${file.filename}`;
-    return this.citizensService.update(user.citizenId, { ijazahUrl: fileUrl } as any);
+    return this.citizensService.update(citizenId, { ijazahUrl: fileUrl } as any);
   }
 
   @Post('my-profile/upload-bpjs')
@@ -161,9 +190,21 @@ export class CitizensController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { storage: citizenStorage, fileFilter: docFilter, limits: { fileSize: 5 * 1024 * 1024 } }))
   async uploadMyBpjs(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
-    if (!user.citizenId) return { message: 'Data kependudukan belum terhubung' };
+    const citizenId = await this.resolveCitizenId(user);
+    if (!citizenId) return { message: 'Data kependudukan belum terhubung' };
     const fileUrl = `/uploads/citizens/${file.filename}`;
-    return this.citizensService.update(user.citizenId, { bpjsKesehatanUrl: fileUrl } as any);
+    return this.citizensService.update(citizenId, { bpjsKesehatanUrl: fileUrl } as any);
+  }
+
+  @Post('my-profile/upload-bpjs-ketenagakerjaan')
+  @ApiOperation({ summary: 'Upload my BPJS Ketenagakerjaan' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file', { storage: citizenStorage, fileFilter: docFilter, limits: { fileSize: 5 * 1024 * 1024 } }))
+  async uploadMyBpjsTK(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
+    const citizenId = await this.resolveCitizenId(user);
+    if (!citizenId) return { message: 'Data kependudukan belum terhubung' };
+    const fileUrl = `/uploads/citizens/${file.filename}`;
+    return this.citizensService.update(citizenId, { bpjsKetenagakerjaanUrl: fileUrl } as any);
   }
 
   @Post('my-profile/upload-vaksin')
@@ -171,9 +212,10 @@ export class CitizensController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { storage: citizenStorage, fileFilter: docFilter, limits: { fileSize: 5 * 1024 * 1024 } }))
   async uploadMyVaksin(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
-    if (!user.citizenId) return { message: 'Data kependudukan belum terhubung' };
+    const citizenId = await this.resolveCitizenId(user);
+    if (!citizenId) return { message: 'Data kependudukan belum terhubung' };
     const fileUrl = `/uploads/citizens/${file.filename}`;
-    return this.citizensService.update(user.citizenId, { vaksinUrl: fileUrl } as any);
+    return this.citizensService.update(citizenId, { vaksinUrl: fileUrl } as any);
   }
 
   @Post('my-profile/upload-skck')
@@ -181,9 +223,10 @@ export class CitizensController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { storage: citizenStorage, fileFilter: docFilter, limits: { fileSize: 5 * 1024 * 1024 } }))
   async uploadMySkck(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
-    if (!user.citizenId) return { message: 'Data kependudukan belum terhubung' };
+    const citizenId = await this.resolveCitizenId(user);
+    if (!citizenId) return { message: 'Data kependudukan belum terhubung' };
     const fileUrl = `/uploads/citizens/${file.filename}`;
-    return this.citizensService.update(user.citizenId, { skckUrl: fileUrl } as any);
+    return this.citizensService.update(citizenId, { skckUrl: fileUrl } as any);
   }
 
   // ============ ADMIN ENDPOINTS ============

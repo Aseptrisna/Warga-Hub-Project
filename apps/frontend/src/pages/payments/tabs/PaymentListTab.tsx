@@ -56,17 +56,21 @@ export default function PaymentListTab() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const params: any = { ...scope, limit: PER_PAGE, page };
+      const params: any = isWarga ? { limit: PER_PAGE, page } : { ...scope, limit: PER_PAGE, page };
       if (filterBulan) params.bulan = filterBulan;
       if (filterTahun) params.tahun = filterTahun;
       if (filterStatus) params.status = filterStatus;
       if (search) params.search = search;
 
+      const statsParams: any = isWarga
+        ? { bulan: filterBulan || undefined, tahun: filterTahun || undefined }
+        : { ...scope, bulan: filterBulan || undefined, tahun: filterTahun || undefined };
+
       const [paymentsRes, statsRes] = await Promise.all([
         isWarga
           ? paymentsService.getMy(params)
           : paymentsService.getAll(params),
-        paymentsService.getStatistics({ ...scope, bulan: filterBulan || undefined, tahun: filterTahun || undefined }),
+        paymentsService.getStatistics(statsParams),
       ]);
       setPayments(paymentsRes.data || []);
       setTotal(paymentsRes.meta?.total || 0);
@@ -175,13 +179,13 @@ export default function PaymentListTab() {
   // Export CSV
   const handleExportCSV = async () => {
     try {
-      const params: any = { ...scope, limit: 9999 };
+      const params: any = isWarga ? { limit: 9999 } : { ...scope, limit: 9999 };
       if (filterBulan) params.bulan = filterBulan;
       if (filterTahun) params.tahun = filterTahun;
       if (filterStatus) params.status = filterStatus;
       if (search) params.search = search;
 
-      const res = await paymentsService.getAll(params);
+      const res = isWarga ? await paymentsService.getMy(params) : await paymentsService.getAll(params);
       const allData: any[] = res.data || [];
       if (allData.length === 0) {
         Swal.fire({ icon: 'info', title: 'Data Kosong', text: 'Tidak ada data pembayaran untuk diexport' });
@@ -264,13 +268,15 @@ export default function PaymentListTab() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          placeholder="Cari nama warga..."
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm w-56 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
+        {!isWarga && (
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            placeholder="Cari nama warga..."
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm w-56 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        )}
         <select
           value={filterBulan}
           onChange={(e) => { setFilterBulan(e.target.value); setPage(1); }}

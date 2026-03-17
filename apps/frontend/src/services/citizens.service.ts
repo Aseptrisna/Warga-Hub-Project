@@ -87,7 +87,14 @@ export const citizensService = {
     return response.data;
   },
 
-  async updateMyProfile(data: { noTelp?: string; email?: string; alamat?: string }) {
+  async updateMyProfile(data: {
+    noTelp?: string;
+    email?: string;
+    alamat?: string;
+    npwp?: string;
+    noBpjsKesehatan?: string;
+    noBpjsKetenagakerjaan?: string;
+  }) {
     const response = await api.patch('/citizens/my-profile', data);
     return response.data;
   },

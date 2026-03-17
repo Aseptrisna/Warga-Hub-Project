@@ -69,6 +69,7 @@ export class PaymentsService {
 
   async getStatistics(filter?: any) {
     const matchFilter: any = {};
+    if (filter?.citizenId) matchFilter.citizenId = filter.citizenId;
     if (filter?.desa) matchFilter.desa = filter.desa;
     if (filter?.rw) matchFilter.rw = filter.rw;
     if (filter?.rt) matchFilter.rt = filter.rt;

@@ -1,24 +1,35 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2 } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { ArrowLeft, CheckCircle2, Loader2 } from 'lucide-react';
 import { letterTemplatesService, lettersService, LetterTemplate } from '../../services/letters.service';
 import { citizensService, Citizen } from '../../services/citizens.service';
+import { useAuthStore } from '../../stores/auth.store';
+import { Role } from '@shared/role.enum';
 
 const LetterRequestPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [templates, setTemplates] = useState<LetterTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<LetterTemplate | null>(null);
   const [citizens, setCitizens] = useState<Citizen[]>([]);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [submitted, setSubmitted] = useState(false);
   const [letterNumber, setLetterNumber] = useState('');
 
+  // Controlled form state
+  const [templateId, setTemplateId] = useState('');
+  const [citizenId, setCitizenId] = useState('');
+  const [formData, setFormData] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   useEffect(() => {
-    loadTemplates();
-    loadCitizens();
+    const init = async () => {
+      setInitialLoading(true);
+      await Promise.all([loadTemplates(), loadCitizens()]);
+      setInitialLoading(false);
+    };
+    init();
   }, []);
 
   const loadTemplates = async () => {
@@ -32,76 +43,90 @@ const LetterRequestPage = () => {
 
   const loadCitizens = async () => {
     try {
-      const response = await citizensService.getAll({ limit: 100 });
-      setCitizens(response.data);
+      if (user?.role === Role.WARGA) {
+        const profile = await citizensService.getMyProfile();
+        if (profile?.noKk) {
+          const response = await citizensService.getAll({ noKk: profile.noKk, limit: 50 });
+          setCitizens(response.data);
+        }
+      } else {
+        const response = await citizensService.getAll({ limit: 100 });
+        setCitizens(response.data);
+      }
     } catch (error) {
       console.error('Failed to load citizens:', error);
     }
   };
 
-  // Dynamic schema based on selected template
-  const createSchema = () => {
-    if (!selectedTemplate) {
-      return z.object({
-        templateId: z.string().min(1, 'Pilih template surat'),
-        citizenId: z.string().min(1, 'Pilih warga'),
+  // When template selection changes
+  const handleTemplateChange = (id: string) => {
+    setTemplateId(id);
+    const template = templates.find((t) => t.id === id) || null;
+    setSelectedTemplate(template);
+    // Reset form data when template changes
+    setFormData({});
+    setCitizenId('');
+    setErrors({});
+  };
+
+  // When citizen selection changes - auto-fill fields
+  const handleCitizenChange = (id: string) => {
+    setCitizenId(id);
+    const citizen = citizens.find((c) => c.id === id);
+    if (citizen && selectedTemplate) {
+      const autoFill: Record<string, string> = {
+        nama: citizen.namaLengkap || '',
+        nik: citizen.nik || '',
+        tempatLahir: citizen.tempatLahir || '',
+        tanggalLahir: citizen.tanggalLahir
+          ? new Date(citizen.tanggalLahir).toLocaleDateString('id-ID')
+          : '',
+        jenisKelamin: citizen.jenisKelamin || '',
+        agama: citizen.agama || '',
+        pekerjaan: citizen.pekerjaan || '',
+        alamat: citizen.alamat || '',
+      };
+      setFormData((prev) => ({ ...prev, ...autoFill }));
+    }
+  };
+
+  const handleFieldChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    // Clear error when user types
+    if (errors[field]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  };
+
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!templateId) newErrors.templateId = 'Pilih jenis surat';
+    if (!citizenId) newErrors.citizenId = 'Pilih warga';
+
+    if (selectedTemplate) {
+      selectedTemplate.requiredFields.forEach((field) => {
+        if (!formData[field] || formData[field].trim() === '') {
+          newErrors[field] = `${field} wajib diisi`;
+        }
       });
     }
 
-    const fields: Record<string, any> = {
-      templateId: z.string().min(1, 'Pilih template surat'),
-      citizenId: z.string().min(1, 'Pilih warga'),
-    };
-
-    selectedTemplate.requiredFields.forEach((field) => {
-      fields[field] = z.string().min(1, `${field} wajib diisi`);
-    });
-
-    return z.object(fields);
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    watch,
-    setValue,
-  } = useForm({
-    resolver: zodResolver(createSchema()),
-  });
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  const templateId = watch('templateId');
-  const citizenId = watch('citizenId');
+    if (!validate()) return;
 
-  useEffect(() => {
-    if (templateId) {
-      const template = templates.find((t) => t.id === templateId);
-      setSelectedTemplate(template || null);
-    }
-  }, [templateId, templates]);
-
-  useEffect(() => {
-    if (citizenId) {
-      const citizen = citizens.find((c) => c.id === citizenId);
-      if (citizen && selectedTemplate) {
-        // Auto-fill citizen data
-        setValue('nama', citizen.namaLengkap);
-        setValue('nik', citizen.nik);
-        setValue('tempatLahir', citizen.tempatLahir || '');
-        setValue('tanggalLahir', citizen.tanggalLahir ? new Date(citizen.tanggalLahir).toLocaleDateString('id-ID') : '');
-        setValue('jenisKelamin', citizen.jenisKelamin || '');
-        setValue('agama', citizen.agama || '');
-        setValue('pekerjaan', citizen.pekerjaan || '');
-        setValue('alamat', citizen.alamat || '');
-      }
-    }
-  }, [citizenId, citizens, selectedTemplate, setValue]);
-
-  const onSubmit = async (data: any) => {
     try {
       setLoading(true);
-      const { templateId, citizenId, ...formData } = data;
-
       const response = await lettersService.create({
         templateId,
         citizenId,
@@ -144,6 +169,10 @@ const LetterRequestPage = () => {
               onClick={() => {
                 setSubmitted(false);
                 setSelectedTemplate(null);
+                setTemplateId('');
+                setCitizenId('');
+                setFormData({});
+                setErrors({});
               }}
               className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
@@ -154,6 +183,19 @@ const LetterRequestPage = () => {
       </div>
     );
   }
+
+  if (initialLoading) {
+    return (
+      <div className="p-6 max-w-3xl mx-auto">
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          <span className="ml-3 text-gray-600">Memuat data...</span>
+        </div>
+      </div>
+    );
+  }
+
+  const autoFilledFields = ['nama', 'nik', 'tempatLahir', 'tanggalLahir', 'jenisKelamin', 'agama', 'pekerjaan', 'alamat'];
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
@@ -173,14 +215,15 @@ const LetterRequestPage = () => {
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="bg-white border border-gray-200 rounded-lg p-6">
+      <form onSubmit={onSubmit} className="bg-white border border-gray-200 rounded-lg p-6">
         {/* Template Selection */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Jenis Surat <span className="text-red-500">*</span>
           </label>
           <select
-            {...register('templateId')}
+            value={templateId}
+            onChange={(e) => handleTemplateChange(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="">Pilih jenis surat...</option>
@@ -191,7 +234,7 @@ const LetterRequestPage = () => {
             ))}
           </select>
           {errors.templateId && (
-            <p className="text-xs text-red-600 mt-1">{errors.templateId.message as string}</p>
+            <p className="text-xs text-red-600 mt-1">{errors.templateId}</p>
           )}
           {selectedTemplate && (
             <p className="text-xs text-gray-600 mt-2">{selectedTemplate.description}</p>
@@ -199,33 +242,35 @@ const LetterRequestPage = () => {
         </div>
 
         {/* Citizen Selection */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Warga <span className="text-red-500">*</span>
-          </label>
-          <select
-            {...register('citizenId')}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">Pilih warga...</option>
-            {citizens.map((citizen) => (
-              <option key={citizen.id} value={citizen.id}>
-                {citizen.namaLengkap} - {citizen.nik}
-              </option>
-            ))}
-          </select>
-          {errors.citizenId && (
-            <p className="text-xs text-red-600 mt-1">{errors.citizenId.message as string}</p>
-          )}
-        </div>
+        {selectedTemplate && (
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {user?.role === Role.WARGA ? 'Anggota Keluarga' : 'Warga'} <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={citizenId}
+              onChange={(e) => handleCitizenChange(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">{user?.role === Role.WARGA ? 'Pilih anggota keluarga...' : 'Pilih warga...'}</option>
+              {citizens.map((citizen) => (
+                <option key={citizen.id} value={citizen.id}>
+                  {citizen.namaLengkap} - {citizen.nik}
+                  {user?.role === Role.WARGA && citizen.statusHubunganDalamKeluarga ? ` (${citizen.statusHubunganDalamKeluarga})` : ''}
+                </option>
+              ))}
+            </select>
+            {errors.citizenId && (
+              <p className="text-xs text-red-600 mt-1">{errors.citizenId}</p>
+            )}
+          </div>
+        )}
 
         {/* Dynamic Fields */}
-        {selectedTemplate && (
+        {selectedTemplate && citizenId && (
           <div className="space-y-4 border-t border-gray-200 pt-6">
             <h3 className="font-semibold text-gray-900 mb-4">Data Surat</h3>
             {selectedTemplate.requiredFields.map((field) => {
-              // Skip fields that are auto-filled from citizen data
-              const autoFilledFields = ['nama', 'nik', 'tempatLahir', 'tanggalLahir', 'jenisKelamin', 'agama', 'pekerjaan', 'alamat'];
               const isAutoFilled = autoFilledFields.includes(field);
 
               return (
@@ -237,7 +282,8 @@ const LetterRequestPage = () => {
                   </label>
                   {field === 'alamat' || field.includes('keterangan') ? (
                     <textarea
-                      {...register(field)}
+                      value={formData[field] || ''}
+                      onChange={(e) => handleFieldChange(field, e.target.value)}
                       rows={3}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder={`Masukkan ${field}...`}
@@ -246,14 +292,15 @@ const LetterRequestPage = () => {
                   ) : (
                     <input
                       type="text"
-                      {...register(field)}
+                      value={formData[field] || ''}
+                      onChange={(e) => handleFieldChange(field, e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder={`Masukkan ${field}...`}
                       readOnly={isAutoFilled}
                     />
                   )}
                   {errors[field] && (
-                    <p className="text-xs text-red-600 mt-1">{errors[field]?.message as string}</p>
+                    <p className="text-xs text-red-600 mt-1">{errors[field]}</p>
                   )}
                 </div>
               );
@@ -265,10 +312,17 @@ const LetterRequestPage = () => {
         <div className="flex gap-3 mt-6 pt-6 border-t border-gray-200">
           <button
             type="submit"
-            disabled={loading || !selectedTemplate}
+            disabled={loading || !selectedTemplate || !citizenId}
             className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Mengirim...' : 'Ajukan Surat'}
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Mengirim...
+              </span>
+            ) : (
+              'Ajukan Surat'
+            )}
           </button>
           <button
             type="button"

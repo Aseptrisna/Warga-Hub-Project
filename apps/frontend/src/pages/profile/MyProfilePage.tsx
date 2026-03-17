@@ -12,6 +12,7 @@ const DOCUMENT_TYPES = [
   { key: 'upload-surat-nikah', label: 'Surat Nikah', field: 'suratNikahUrl' },
   { key: 'upload-ijazah', label: 'Ijazah', field: 'ijazahUrl' },
   { key: 'upload-bpjs', label: 'BPJS Kesehatan', field: 'bpjsKesehatanUrl' },
+  { key: 'upload-bpjs-ketenagakerjaan', label: 'BPJS Ketenagakerjaan', field: 'bpjsKetenagakerjaanUrl' },
   { key: 'upload-vaksin', label: 'Sertifikat Vaksin', field: 'vaksinUrl' },
   { key: 'upload-skck', label: 'SKCK', field: 'skckUrl' },
 ];
@@ -22,7 +23,14 @@ export default function MyProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'data' | 'documents'>('data');
-  const [editForm, setEditForm] = useState({ noTelp: '', email: '', alamat: '' });
+  const [editForm, setEditForm] = useState({
+    noTelp: '',
+    email: '',
+    alamat: '',
+    npwp: '',
+    noBpjsKesehatan: '',
+    noBpjsKetenagakerjaan: '',
+  });
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
 
   const apiBaseUrl = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:3000';
@@ -35,13 +43,22 @@ export default function MyProfilePage() {
     try {
       setLoading(true);
       const data = await citizensService.getMyProfile();
-      setCitizen(data);
-      if (data) {
-        setEditForm({
-          noTelp: data.noTelp || '',
-          email: data.email || '',
-          alamat: data.alamat || '',
-        });
+      
+      // Handle the case where the backend returns { message: '...', data: null }
+      if (data && data.data === null) {
+        setCitizen(null);
+      } else {
+        setCitizen(data);
+        if (data) {
+          setEditForm({
+            noTelp: data.noTelp || '',
+            email: data.email || '',
+            alamat: data.alamat || '',
+            npwp: data.npwp || '',
+            noBpjsKesehatan: data.noBpjsKesehatan || '',
+            noBpjsKetenagakerjaan: data.noBpjsKetenagakerjaan || '',
+          });
+        }
       }
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -178,7 +195,7 @@ export default function MyProfilePage() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           {/* Read-only fields */}
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Data Kependudukan</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
             {[
               { label: 'No. KK', value: citizen.noKk },
               { label: 'Jenis Kelamin', value: citizen.jenisKelamin },
@@ -191,18 +208,19 @@ export default function MyProfilePage() {
               { label: 'Hub. Keluarga', value: citizen.statusHubunganDalamKeluarga },
               { label: 'Kewarganegaraan', value: citizen.kewarganegaraan },
               { label: 'Golongan Darah', value: citizen.golonganDarah || '-' },
-              { label: 'NPWP', value: citizen.npwp || '-' },
+              { label: 'No. Akta Lahir', value: citizen.nomorAktaLahir || '-' },
+              { label: 'No. Paspor', value: citizen.nomorPaspor || '-' },
             ].map((item) => (
               <div key={item.label}>
                 <label className="block text-xs font-medium text-gray-500 mb-1">{item.label}</label>
-                <p className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">{item.value || '-'}</p>
+                <p className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">{item.value || '-'}</p>
               </div>
             ))}
           </div>
 
           {/* Editable fields */}
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Data Kontak (dapat diedit)</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 border-t pt-6">Data Kontak & Identitas Tambahan</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">No. Telepon</label>
               <input
@@ -224,11 +242,39 @@ export default function MyProfilePage() {
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Alamat</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Alamat Domisili</label>
               <input
                 type="text"
                 value={editForm.alamat}
                 onChange={(e) => setEditForm({ ...editForm, alamat: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">NPWP</label>
+              <input
+                type="text"
+                value={editForm.npwp}
+                onChange={(e) => setEditForm({ ...editForm, npwp: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                placeholder="00.000.000.0-000.000"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">No. BPJS Kesehatan</label>
+              <input
+                type="text"
+                value={editForm.noBpjsKesehatan}
+                onChange={(e) => setEditForm({ ...editForm, noBpjsKesehatan: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">No. BPJS Ketenagakerjaan</label>
+              <input
+                type="text"
+                value={editForm.noBpjsKetenagakerjaan}
+                onChange={(e) => setEditForm({ ...editForm, noBpjsKetenagakerjaan: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
               />
             </div>
@@ -237,7 +283,7 @@ export default function MyProfilePage() {
           <button
             onClick={handleSaveProfile}
             disabled={saving}
-            className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 text-sm font-medium"
+            className="inline-flex items-center px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 text-sm font-medium transition-colors shadow-sm"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
             Simpan Perubahan
@@ -253,37 +299,39 @@ export default function MyProfilePage() {
             const isUploading = uploadingDoc === doc.key;
 
             return (
-              <div key={doc.key} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-gray-400" />
-                    <span className="text-sm font-medium text-gray-900">{doc.label}</span>
+              <div key={doc.key} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-gray-400" />
+                      <span className="text-sm font-medium text-gray-900">{doc.label}</span>
+                    </div>
+                    {hasDoc && <Check className="w-4 h-4 text-green-600" />}
                   </div>
-                  {hasDoc && <Check className="w-4 h-4 text-green-600" />}
+
+                  {hasDoc ? (
+                    <div className="mb-3">
+                      <a
+                        href={`${apiBaseUrl}${citizen[doc.field]}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center text-xs text-primary-600 hover:text-primary-700 font-medium"
+                      >
+                        Lihat dokumen
+                      </a>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 mb-3 italic">Belum diupload</p>
+                  )}
                 </div>
 
-                {hasDoc ? (
-                  <div className="mb-3">
-                    <a
-                      href={`${apiBaseUrl}${citizen[doc.field]}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-primary-600 hover:text-primary-700"
-                    >
-                      Lihat dokumen
-                    </a>
-                  </div>
-                ) : (
-                  <p className="text-xs text-gray-400 mb-3">Belum diupload</p>
-                )}
-
-                <label className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg cursor-pointer text-xs font-medium transition-colors">
+                <label className="inline-flex items-center justify-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-lg cursor-pointer text-xs font-medium transition-colors">
                   {isUploading ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   ) : (
                     <Upload className="w-3.5 h-3.5" />
                   )}
-                  {hasDoc ? 'Ganti' : 'Upload'}
+                  {hasDoc ? 'Ganti Dokumen' : 'Upload Dokumen'}
                   <input
                     type="file"
                     accept="image/*,.pdf"

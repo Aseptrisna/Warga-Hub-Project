@@ -132,6 +132,22 @@ function getPekerjaanByAge(age: number, gender: string, isWife: boolean): string
   return pick(PEKERJAAN);
 }
 
+let bpjsCounter = 1;
+
+function generateBpjsKesehatan(): string {
+  return `0001${padNum(bpjsCounter++, 9)}`;
+}
+
+function generateBpjsKetenagakerjaan(): string {
+  return `JKN${padNum(Math.floor(Math.random() * 9999999999), 10)}`;
+}
+
+function generateEmail(name: string): string {
+  const clean = name.toLowerCase().replace(/[^a-z ]/g, '').replace(/\s+/g, '.');
+  const domains = ['gmail.com', 'yahoo.co.id', 'outlook.com', 'hotmail.com'];
+  return `${clean}${Math.floor(Math.random() * 99)}@${pick(domains)}`;
+}
+
 interface CitizenData {
   nik: string;
   noKk: string;
@@ -160,6 +176,8 @@ interface CitizenData {
   golonganDarah: string;
   nomorAktaLahir: string;
   npwp?: string;
+  noBpjsKesehatan?: string;
+  noBpjsKetenagakerjaan?: string;
   statusKepemilikanRumah: string;
   statusKependudukan: string;
   isActive: boolean;
@@ -219,9 +237,12 @@ function generateFamily(rtNum: number, rwNum: number): CitizenData[] {
     namaAyah: `${pick(NAMA_DEPAN_PRIA)} ${familyName}`,
     namaIbu: `${pick(NAMA_DEPAN_WANITA)}`,
     noTelp: `08${Math.floor(1000000000 + Math.random() * 9000000000)}`,
+    email: Math.random() < 0.4 ? generateEmail(husbandName) : undefined,
     golonganDarah: pick(GOL_DARAH),
     nomorAktaLahir: `3273-LT-${padNum(husbandBirth.getDate(), 2)}${padNum(husbandBirth.getMonth() + 1, 2)}${husbandBirth.getFullYear()}-${padNum(nikCounter, 4)}`,
     npwp: husbandAge >= 25 && Math.random() < 0.5 ? `${padNum(Math.floor(Math.random() * 99), 2)}.${padNum(Math.floor(Math.random() * 999), 3)}.${padNum(Math.floor(Math.random() * 999), 3)}.${Math.floor(Math.random() * 9)}-${padNum(Math.floor(Math.random() * 999), 3)}.000` : undefined,
+    noBpjsKesehatan: Math.random() < 0.7 ? generateBpjsKesehatan() : undefined,
+    noBpjsKetenagakerjaan: husbandAge >= 18 && Math.random() < 0.4 ? generateBpjsKetenagakerjaan() : undefined,
   });
 
   // Wife
@@ -231,6 +252,7 @@ function generateFamily(rtNum: number, rwNum: number): CitizenData[] {
   const wifeName = `${wifeFirst} ${pick(NAMA_KELUARGA)}`;
   const wifeNik = generateNIK(rtNum, wifeBirth, 'Perempuan');
 
+  const wifePekerjaan = getPekerjaanByAge(wifeAge, 'Perempuan', true);
   members.push({
     ...common,
     nik: wifeNik,
@@ -239,14 +261,17 @@ function generateFamily(rtNum: number, rwNum: number): CitizenData[] {
     tempatLahir: pick(TEMPAT_LAHIR),
     tanggalLahir: wifeBirth,
     pendidikan: getPendidikanByAge(wifeAge),
-    pekerjaan: getPekerjaanByAge(wifeAge, 'Perempuan', true),
+    pekerjaan: wifePekerjaan,
     statusPerkawinan: 'Kawin',
     statusHubunganDalamKeluarga: 'Istri',
     namaAyah: `${pick(NAMA_DEPAN_PRIA)} ${pick(NAMA_KELUARGA)}`,
     namaIbu: `${pick(NAMA_DEPAN_WANITA)}`,
     noTelp: `08${Math.floor(1000000000 + Math.random() * 9000000000)}`,
+    email: Math.random() < 0.3 ? generateEmail(wifeName) : undefined,
     golonganDarah: pick(GOL_DARAH),
     nomorAktaLahir: `3273-LT-${padNum(wifeBirth.getDate(), 2)}${padNum(wifeBirth.getMonth() + 1, 2)}${wifeBirth.getFullYear()}-${padNum(nikCounter, 4)}`,
+    noBpjsKesehatan: Math.random() < 0.7 ? generateBpjsKesehatan() : undefined,
+    noBpjsKetenagakerjaan: wifePekerjaan !== PEKERJAAN_IRT && Math.random() < 0.3 ? generateBpjsKetenagakerjaan() : undefined,
   });
 
   // Children (1-3)
@@ -263,6 +288,7 @@ function generateFamily(rtNum: number, rwNum: number): CitizenData[] {
     const childGender = isGirl ? 'Perempuan' : 'Laki-laki';
     const childNik = generateNIK(rtNum, childBirth, childGender);
 
+    const childPekerjaan = getPekerjaanByAge(childAge, childGender, false);
     members.push({
       ...common,
       nik: childNik,
@@ -271,14 +297,17 @@ function generateFamily(rtNum: number, rwNum: number): CitizenData[] {
       tempatLahir,
       tanggalLahir: childBirth,
       pendidikan: getPendidikanByAge(childAge),
-      pekerjaan: getPekerjaanByAge(childAge, childGender, false),
+      pekerjaan: childPekerjaan,
       statusPerkawinan: childAge >= 18 && Math.random() < 0.15 ? 'Kawin' : 'Belum Kawin',
       statusHubunganDalamKeluarga: 'Anak',
       namaAyah: husbandName,
       namaIbu: wifeName,
       noTelp: childAge >= 12 ? `08${Math.floor(1000000000 + Math.random() * 9000000000)}` : undefined,
+      email: childAge >= 17 && Math.random() < 0.3 ? generateEmail(childName) : undefined,
       golonganDarah: pick(GOL_DARAH),
       nomorAktaLahir: `3273-LT-${padNum(childBirth.getDate(), 2)}${padNum(childBirth.getMonth() + 1, 2)}${childBirth.getFullYear()}-${padNum(nikCounter, 4)}`,
+      noBpjsKesehatan: Math.random() < 0.6 ? generateBpjsKesehatan() : undefined,
+      noBpjsKetenagakerjaan: childAge >= 18 && childPekerjaan !== PEKERJAAN_PELAJAR && Math.random() < 0.3 ? generateBpjsKetenagakerjaan() : undefined,
     });
   }
 
@@ -294,6 +323,7 @@ export const seedCitizensComprehensive = async (citizenModel: any) => {
   // Reset counters
   nikCounter = 1;
   kkCounter = 1;
+  bpjsCounter = 1;
 
   const allCitizens: CitizenData[] = [];
   const TARGET = 500;
