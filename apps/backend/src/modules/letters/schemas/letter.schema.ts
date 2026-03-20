@@ -54,6 +54,15 @@ export class Letter extends BaseSchema {
   @Prop({ type: String })
   regionId?: string; // Region ID (RT level)
 
+  @Prop({ type: String })
+  desa?: string;
+
+  @Prop({ type: String })
+  rw?: string;
+
+  @Prop({ type: String })
+  rt?: string;
+
   // Letter data (dynamic fields based on template)
   @Prop({ type: Object, required: true })
   data: Record<string, any>; // {nama, nik, alamat, keperluan, etc.}
@@ -134,5 +143,8 @@ LetterSchema.index({ templateId: 1 });
 LetterSchema.index({ requestedBy: 1 });
 LetterSchema.index({ citizenId: 1 });
 LetterSchema.index({ regionId: 1 });
+LetterSchema.index({ desa: 1 });
+LetterSchema.index({ rw: 1 });
+LetterSchema.index({ rt: 1 });
 LetterSchema.index({ status: 1 });
 LetterSchema.index({ createdAt: -1 });

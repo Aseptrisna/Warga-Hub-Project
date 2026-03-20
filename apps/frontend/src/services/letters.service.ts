@@ -125,6 +125,9 @@ export const lettersService = {
     templateId?: string;
     requestedBy?: string;
     regionId?: string;
+    desa?: string;
+    rw?: string;
+    rt?: string;
     search?: string;
     page?: number;
     limit?: number;

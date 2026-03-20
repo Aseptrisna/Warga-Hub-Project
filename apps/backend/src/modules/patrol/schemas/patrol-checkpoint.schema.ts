@@ -33,6 +33,16 @@ export class PatrolCheckpoint extends BaseSchema {
   @Prop()
   regionName?: string;
 
+  // Region scoping
+  @Prop({ required: true })
+  desa: string;
+
+  @Prop()
+  rw?: string;
+
+  @Prop()
+  rt?: string;
+
   // Location
   @Prop({ required: true })
   address: string;
@@ -89,3 +99,4 @@ export const PatrolCheckpointSchema = SchemaFactory.createForClass(PatrolCheckpo
 
 // Create geospatial index for location queries
 PatrolCheckpointSchema.index({ location: '2dsphere' });
+PatrolCheckpointSchema.index({ desa: 1, rw: 1, rt: 1 });

@@ -278,10 +278,14 @@ export const actionPermissions = {
   },
 
   // ═══════════════════════════════════════════
-  // RONDA/PATROL - KetuaRT kelola, PetugasRonda scan
+  // RONDA/PATROL - Desa level kelola & monitoring, RT/RW operasional, PetugasRonda scan
   // ═══════════════════════════════════════════
   patrol: {
-    manage: [Role.SUPER_ADMIN, Role.ADMIN_PLATFORM, Role.KETUA_RW, Role.ADMIN_RW, Role.KETUA_RT, Role.ADMIN_RT],
+    manage: [
+      Role.SUPER_ADMIN, Role.ADMIN_PLATFORM, Role.ADMIN_DESA,
+      Role.KEPALA_DESA, Role.SEKRETARIS_DESA,
+      Role.KETUA_RW, Role.ADMIN_RW, Role.KETUA_RT, Role.ADMIN_RT,
+    ],
     scan: [Role.PETUGAS_RONDA, Role.KETUA_RT, Role.ADMIN_RT],
   },
 

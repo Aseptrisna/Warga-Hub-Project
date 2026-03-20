@@ -25,22 +25,34 @@ export class PatrolSchedulesService {
     regionId?: string;
     status?: PatrolStatus;
     date?: string;
+    startDate?: string;
+    endDate?: string;
     assignedOfficer?: string;
+    desa?: string;
+    rw?: string;
+    rt?: string;
     page?: number;
     limit?: number;
   }): Promise<{ data: PatrolSchedule[]; meta: any }> {
-    const { regionId, status, date, assignedOfficer, page = 1, limit = 50 } = query || {};
+    const { regionId, status, date, startDate, endDate, assignedOfficer, desa, rw, rt, page = 1, limit = 50 } = query || {};
     const filter: any = {};
 
     if (regionId) filter.regionId = regionId;
     if (status) filter.status = status;
     if (assignedOfficer) filter.assignedOfficers = assignedOfficer;
+    if (desa) filter.desa = desa;
+    if (rw) filter.rw = rw;
+    if (rt) filter.rt = rt;
     if (date) {
       const startOfDay = new Date(date);
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
       filter.date = { $gte: startOfDay, $lte: endOfDay };
+    } else if (startDate || endDate) {
+      filter.date = {};
+      if (startDate) filter.date.$gte = new Date(startDate);
+      if (endDate) filter.date.$lte = new Date(endDate);
     }
 
     const total = await this.scheduleModel.countDocuments(filter);
@@ -177,11 +189,14 @@ export class PatrolSchedulesService {
   }
 
   // Get patrol statistics
-  async getStatistics(query?: { regionId?: string; startDate?: string; endDate?: string }): Promise<any> {
-    const { regionId, startDate, endDate } = query || {};
+  async getStatistics(query?: { regionId?: string; desa?: string; rw?: string; rt?: string; startDate?: string; endDate?: string }): Promise<any> {
+    const { regionId, desa, rw, rt, startDate, endDate } = query || {};
     const filter: any = {};
 
     if (regionId) filter.regionId = regionId;
+    if (desa) filter.desa = desa;
+    if (rw) filter.rw = rw;
+    if (rt) filter.rt = rt;
     if (startDate || endDate) {
       filter.date = {};
       if (startDate) filter.date.$gte = new Date(startDate);

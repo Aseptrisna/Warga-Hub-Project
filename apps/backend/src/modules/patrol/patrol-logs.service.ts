@@ -73,12 +73,15 @@ export class PatrolLogsService {
       }
     }
 
-    // Create log
+    // Create log (copy region scope from schedule)
     const log = new this.logModel({
       scheduleId: scanDto.scheduleId,
       checkpointId: scanDto.checkpointId,
       checkpointName: checkpoint.name,
       checkpointCode: checkpoint.code,
+      desa: schedule.desa,
+      rw: schedule.rw,
+      rt: schedule.rt,
       scannedBy: user.id,
       scannedByName: user.name,
       scannedAt: new Date(),
@@ -140,6 +143,9 @@ export class PatrolLogsService {
     status?: ScanStatus;
     startDate?: string;
     endDate?: string;
+    desa?: string;
+    rw?: string;
+    rt?: string;
     page?: number;
     limit?: number;
   }): Promise<{ data: PatrolLog[]; meta: any }> {
@@ -150,6 +156,9 @@ export class PatrolLogsService {
       status,
       startDate,
       endDate,
+      desa,
+      rw,
+      rt,
       page = 1,
       limit = 50,
     } = query || {};
@@ -160,6 +169,9 @@ export class PatrolLogsService {
     if (checkpointId) filter.checkpointId = checkpointId;
     if (scannedBy) filter.scannedBy = scannedBy;
     if (status) filter.status = status;
+    if (desa) filter.desa = desa;
+    if (rw) filter.rw = rw;
+    if (rt) filter.rt = rt;
 
     if (startDate || endDate) {
       filter.scannedAt = {};
@@ -255,15 +267,21 @@ export class PatrolLogsService {
     scheduleId?: string;
     checkpointId?: string;
     officerId?: string;
+    desa?: string;
+    rw?: string;
+    rt?: string;
     startDate?: string;
     endDate?: string;
   }): Promise<any> {
-    const { scheduleId, checkpointId, officerId, startDate, endDate } = query || {};
+    const { scheduleId, checkpointId, officerId, desa, rw, rt, startDate, endDate } = query || {};
     const filter: any = {};
 
     if (scheduleId) filter.scheduleId = scheduleId;
     if (checkpointId) filter.checkpointId = checkpointId;
     if (officerId) filter.scannedBy = officerId;
+    if (desa) filter.desa = desa;
+    if (rw) filter.rw = rw;
+    if (rt) filter.rt = rt;
 
     if (startDate || endDate) {
       filter.scannedAt = {};

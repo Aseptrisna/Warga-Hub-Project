@@ -15,9 +15,10 @@ export class PatrolSchedulesController {
   constructor(private readonly schedulesService: PatrolSchedulesService) {}
 
   @Post()
-  @Roles(Role.SUPER_ADMIN, Role.KETUA_RT, Role.ADMIN_RT, Role.KETUA_RW, Role.ADMIN_RW)
-  create(@Body() createDto: CreatePatrolScheduleDto) {
-    return this.schedulesService.create(createDto);
+  @Roles(Role.SUPER_ADMIN, Role.ADMIN_PLATFORM, Role.ADMIN_DESA, Role.KEPALA_DESA, Role.SEKRETARIS_DESA, Role.KETUA_RW, Role.ADMIN_RW, Role.KETUA_RT, Role.ADMIN_RT)
+  create(@Body() createDto: CreatePatrolScheduleDto, @CurrentUser() user: any) {
+    const scope = getRegionScope(user);
+    return this.schedulesService.create({ ...createDto, ...scope });
   }
 
   @Get()
@@ -25,6 +26,8 @@ export class PatrolSchedulesController {
     @Query('regionId') regionId?: string,
     @Query('status') status?: PatrolStatus,
     @Query('date') date?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
     @Query('assignedOfficer') assignedOfficer?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
@@ -35,6 +38,8 @@ export class PatrolSchedulesController {
       regionId,
       status,
       date,
+      startDate,
+      endDate,
       assignedOfficer,
       page: page ? parseInt(page) : undefined,
       limit: limit ? parseInt(limit) : undefined,
@@ -59,13 +64,13 @@ export class PatrolSchedulesController {
   }
 
   @Patch(':id')
-  @Roles(Role.SUPER_ADMIN, Role.KETUA_RT, Role.ADMIN_RT, Role.KETUA_RW, Role.ADMIN_RW)
+  @Roles(Role.SUPER_ADMIN, Role.ADMIN_PLATFORM, Role.ADMIN_DESA, Role.KEPALA_DESA, Role.SEKRETARIS_DESA, Role.KETUA_RW, Role.ADMIN_RW, Role.KETUA_RT, Role.ADMIN_RT)
   update(@Param('id') id: string, @Body() updateDto: UpdatePatrolScheduleDto) {
     return this.schedulesService.update(id, updateDto);
   }
 
   @Delete(':id')
-  @Roles(Role.SUPER_ADMIN, Role.KETUA_RT, Role.ADMIN_RT)
+  @Roles(Role.SUPER_ADMIN, Role.ADMIN_PLATFORM, Role.ADMIN_DESA, Role.KEPALA_DESA, Role.KETUA_RW, Role.ADMIN_RW, Role.KETUA_RT, Role.ADMIN_RT)
   remove(@Param('id') id: string) {
     return this.schedulesService.remove(id);
   }
@@ -83,7 +88,7 @@ export class PatrolSchedulesController {
   }
 
   @Post(':id/cancel')
-  @Roles(Role.KETUA_RT, Role.ADMIN_RT, Role.KETUA_RW, Role.ADMIN_RW)
+  @Roles(Role.SUPER_ADMIN, Role.ADMIN_PLATFORM, Role.ADMIN_DESA, Role.KEPALA_DESA, Role.SEKRETARIS_DESA, Role.KETUA_RW, Role.ADMIN_RW, Role.KETUA_RT, Role.ADMIN_RT)
   cancelPatrol(@Param('id') id: string, @Body('reason') reason?: string) {
     return this.schedulesService.cancelPatrol(id, reason);
   }

@@ -37,15 +37,18 @@ export const seedPatrolCheckpoints = async (checkpointModel: any, regionModel: a
       latitude: baseLat + (idx * 0.001),
       longitude: baseLng + (idx * 0.0008),
       validationRadius: 50,
+      desa: rt.desa || 'Sukamaju',
+      rw: rt.rw || rwNum,
+      rt: rt.rt || rtNum,
     });
   });
 
   // 4 extra checkpoints in common areas
   const extras = [
-    { name: 'Gerbang Masuk Desa', code: 'CP-DESA-001', description: 'Gerbang utama masuk Desa Sukamaju', regionId: rtRegions[0]._id, regionName: 'Desa Sukamaju', address: 'Jl. Raya Sukamaju Km 0', latitude: baseLat - 0.002, longitude: baseLng - 0.001, validationRadius: 40 },
-    { name: 'Lapangan Desa', code: 'CP-DESA-002', description: 'Area lapangan olahraga desa', regionId: rtRegions[3]._id, regionName: 'Desa Sukamaju', address: 'Lapangan Desa Sukamaju', latitude: baseLat + 0.003, longitude: baseLng + 0.002, validationRadius: 60 },
-    { name: 'Pasar Desa', code: 'CP-DESA-003', description: 'Area pasar tradisional desa', regionId: rtRegions[6]._id, regionName: 'Desa Sukamaju', address: 'Pasar Desa Sukamaju', latitude: baseLat + 0.005, longitude: baseLng - 0.002, validationRadius: 50 },
-    { name: 'Masjid Al-Ikhlas', code: 'CP-DESA-004', description: 'Area parkir Masjid Al-Ikhlas', regionId: rtRegions[1]._id, regionName: 'Desa Sukamaju', address: 'Masjid Al-Ikhlas, RW 01', latitude: baseLat + 0.001, longitude: baseLng + 0.003, validationRadius: 35 },
+    { name: 'Gerbang Masuk Desa', code: 'CP-DESA-001', description: 'Gerbang utama masuk Desa Sukamaju', regionId: rtRegions[0]._id, regionName: 'Desa Sukamaju', address: 'Jl. Raya Sukamaju Km 0', latitude: baseLat - 0.002, longitude: baseLng - 0.001, validationRadius: 40, desa: 'Sukamaju' },
+    { name: 'Lapangan Desa', code: 'CP-DESA-002', description: 'Area lapangan olahraga desa', regionId: rtRegions[3]._id, regionName: 'Desa Sukamaju', address: 'Lapangan Desa Sukamaju', latitude: baseLat + 0.003, longitude: baseLng + 0.002, validationRadius: 60, desa: 'Sukamaju' },
+    { name: 'Pasar Desa', code: 'CP-DESA-003', description: 'Area pasar tradisional desa', regionId: rtRegions[6]._id, regionName: 'Desa Sukamaju', address: 'Pasar Desa Sukamaju', latitude: baseLat + 0.005, longitude: baseLng - 0.002, validationRadius: 50, desa: 'Sukamaju' },
+    { name: 'Masjid Al-Ikhlas', code: 'CP-DESA-004', description: 'Area parkir Masjid Al-Ikhlas', regionId: rtRegions[1]._id, regionName: 'Desa Sukamaju', address: 'Masjid Al-Ikhlas, RW 01', latitude: baseLat + 0.001, longitude: baseLng + 0.003, validationRadius: 35, desa: 'Sukamaju' },
   ];
   allCheckpointData.push(...extras);
 

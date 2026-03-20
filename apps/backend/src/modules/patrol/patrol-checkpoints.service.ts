@@ -50,14 +50,20 @@ export class PatrolCheckpointsService {
     regionId?: string;
     isActive?: boolean;
     search?: string;
+    desa?: string;
+    rw?: string;
+    rt?: string;
     page?: number;
     limit?: number;
   }): Promise<{ data: PatrolCheckpoint[]; meta: any }> {
-    const { regionId, isActive, search, page = 1, limit = 50 } = query || {};
+    const { regionId, isActive, search, desa, rw, rt, page = 1, limit = 50 } = query || {};
     const filter: any = {};
 
     if (regionId) filter.regionId = regionId;
     if (isActive !== undefined) filter.isActive = isActive;
+    if (desa) filter.desa = desa;
+    if (rw) filter.rw = rw;
+    if (rt) filter.rt = rt;
     if (search) {
       filter.$or = [
         { name: { $regex: search, $options: 'i' } },

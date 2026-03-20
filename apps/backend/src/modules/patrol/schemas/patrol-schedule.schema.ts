@@ -42,6 +42,16 @@ export class PatrolSchedule extends BaseSchema {
   @Prop()
   regionName?: string;
 
+  // Region scoping
+  @Prop({ required: true })
+  desa: string;
+
+  @Prop()
+  rw?: string;
+
+  @Prop()
+  rt?: string;
+
   // Assigned officers
   @Prop({ type: [String], default: [] })
   assignedOfficers: string[]; // User IDs
@@ -78,3 +88,5 @@ export class PatrolSchedule extends BaseSchema {
 }
 
 export const PatrolScheduleSchema = SchemaFactory.createForClass(PatrolSchedule);
+
+PatrolScheduleSchema.index({ desa: 1, rw: 1, rt: 1 });

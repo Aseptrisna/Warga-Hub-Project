@@ -59,6 +59,9 @@ export class LettersService {
       requestedByName: user.name,
       citizenId: createDto.citizenId,
       regionId: createDto.regionId,
+      desa: user.desa,
+      rw: user.rw,
+      rt: user.rt,
       data: createDto.data,
       status: LetterStatus.PENDING_RT,
       metadata: createDto.metadata,
@@ -98,6 +101,9 @@ export class LettersService {
     templateId?: string;
     requestedBy?: string;
     regionId?: string;
+    desa?: string;
+    rw?: string;
+    rt?: string;
     search?: string;
     page?: number;
     limit?: number;
@@ -107,6 +113,9 @@ export class LettersService {
       templateId,
       requestedBy,
       regionId,
+      desa,
+      rw,
+      rt,
       search,
       page = 1,
       limit = 50,
@@ -117,6 +126,9 @@ export class LettersService {
     if (templateId) filter.templateId = templateId;
     if (requestedBy) filter.requestedBy = requestedBy;
     if (regionId) filter.regionId = regionId;
+    if (desa) filter.desa = desa;
+    if (rw) filter.rw = rw;
+    if (rt) filter.rt = rt;
     if (search) filter.letterNumber = { $regex: search, $options: 'i' };
 
     const total = await this.letterModel.countDocuments(filter);

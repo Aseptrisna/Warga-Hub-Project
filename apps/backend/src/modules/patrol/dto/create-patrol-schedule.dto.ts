@@ -18,6 +18,18 @@ export class CreatePatrolScheduleDto {
   @IsString()
   regionName?: string;
 
+  @IsNotEmpty()
+  @IsString()
+  desa: string;
+
+  @IsOptional()
+  @IsString()
+  rw?: string;
+
+  @IsOptional()
+  @IsString()
+  rt?: string;
+
   @IsOptional()
   @IsArray()
   @IsString({ each: true })

@@ -30,6 +30,13 @@ export const seedPatrolSchedules = async (
     return;
   }
 
+  // Helper to extract region scope from RT region object
+  const getScope = (rt: any) => ({
+    desa: rt?.desa || 'Sukamaju',
+    rw: rt?.rw,
+    rt: rt?.rt,
+  });
+
   const today = new Date();
   const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
   const twoDaysAgo = new Date(today); twoDaysAgo.setDate(today.getDate() - 2);
@@ -48,6 +55,7 @@ export const seedPatrolSchedules = async (
       shift: PatrolShift.MALAM,
       regionId: rt01._id,
       regionName: 'RT 01',
+      ...getScope(rt01),
       assignedOfficers: [rondaUsers[0]._id],
       assignedOfficerNames: [rondaUsers[0].name],
       requiredCheckpoints: getCheckpoints('rt01Checkpoints'),
@@ -63,6 +71,7 @@ export const seedPatrolSchedules = async (
       shift: PatrolShift.MALAM,
       regionId: rt04?._id || rt01._id,
       regionName: rt04 ? 'RT 04' : 'RT 01',
+      ...getScope(rt04 || rt01),
       assignedOfficers: [rondaUsers[1]?._id || rondaUsers[0]._id],
       assignedOfficerNames: [rondaUsers[1]?.name || rondaUsers[0].name],
       requiredCheckpoints: getCheckpoints('rt04Checkpoints'),
@@ -78,6 +87,7 @@ export const seedPatrolSchedules = async (
       shift: PatrolShift.SIANG,
       regionId: rt07?._id || rt01._id,
       regionName: rt07 ? 'RT 07' : 'RT 01',
+      ...getScope(rt07 || rt01),
       assignedOfficers: [rondaUsers[2]?._id || rondaUsers[0]._id],
       assignedOfficerNames: [rondaUsers[2]?.name || rondaUsers[0].name],
       requiredCheckpoints: getCheckpoints('rt07Checkpoints'),
@@ -94,6 +104,7 @@ export const seedPatrolSchedules = async (
       shift: PatrolShift.SIANG,
       regionId: rt01._id,
       regionName: 'RT 01',
+      ...getScope(rt01),
       assignedOfficers: [rondaUsers[0]._id, ketuaRT01?._id].filter(Boolean),
       assignedOfficerNames: [rondaUsers[0].name, ketuaRT01?.name].filter(Boolean),
       requiredCheckpoints: getCheckpoints('rt01Checkpoints'),
@@ -108,6 +119,7 @@ export const seedPatrolSchedules = async (
       shift: PatrolShift.SIANG,
       regionId: rt10?._id || rt01._id,
       regionName: rt10 ? 'RT 10' : 'RT 01',
+      ...getScope(rt10 || rt01),
       assignedOfficers: [rondaUsers[3]?._id || rondaUsers[0]._id],
       assignedOfficerNames: [rondaUsers[3]?.name || rondaUsers[0].name],
       requiredCheckpoints: getCheckpoints('rt10Checkpoints'),
@@ -123,6 +135,7 @@ export const seedPatrolSchedules = async (
       shift: PatrolShift.MALAM,
       regionId: rt01._id,
       regionName: 'RT 01',
+      ...getScope(rt01),
       assignedOfficers: [rondaUsers[0]._id],
       assignedOfficerNames: [rondaUsers[0].name],
       requiredCheckpoints: getCheckpoints('rt01Checkpoints'),
@@ -136,6 +149,7 @@ export const seedPatrolSchedules = async (
       shift: PatrolShift.MALAM,
       regionId: rt04?._id || rt01._id,
       regionName: rt04 ? 'RT 04' : 'RT 01',
+      ...getScope(rt04 || rt01),
       assignedOfficers: [rondaUsers[1]?._id || rondaUsers[0]._id, ketuaRT04?._id].filter(Boolean),
       assignedOfficerNames: [rondaUsers[1]?.name || rondaUsers[0].name, ketuaRT04?.name].filter(Boolean),
       requiredCheckpoints: getCheckpoints('rt04Checkpoints'),
@@ -149,6 +163,7 @@ export const seedPatrolSchedules = async (
       shift: PatrolShift.SIANG,
       regionId: rt01._id,
       regionName: 'RT 01',
+      ...getScope(rt01),
       assignedOfficers: [rondaUsers[0]._id],
       assignedOfficerNames: [rondaUsers[0].name],
       requiredCheckpoints: getCheckpoints('rt01Checkpoints'),
@@ -161,6 +176,7 @@ export const seedPatrolSchedules = async (
       shift: PatrolShift.MALAM,
       regionId: rt07?._id || rt01._id,
       regionName: rt07 ? 'RT 07' : 'RT 01',
+      ...getScope(rt07 || rt01),
       assignedOfficers: [rondaUsers[2]?._id || rondaUsers[0]._id],
       assignedOfficerNames: [rondaUsers[2]?.name || rondaUsers[0].name],
       requiredCheckpoints: getCheckpoints('rt07Checkpoints'),
@@ -173,6 +189,7 @@ export const seedPatrolSchedules = async (
       shift: PatrolShift.MALAM,
       regionId: rt01._id,
       regionName: 'RT 01',
+      ...getScope(rt01),
       assignedOfficers: [rondaUsers[0]._id],
       assignedOfficerNames: [rondaUsers[0].name],
       requiredCheckpoints: getCheckpoints('rt01Checkpoints'),
@@ -186,6 +203,7 @@ export const seedPatrolSchedules = async (
       shift: PatrolShift.MALAM,
       regionId: rt10?._id || rt01._id,
       regionName: rt10 ? 'RT 10' : 'RT 01',
+      ...getScope(rt10 || rt01),
       assignedOfficers: [rondaUsers[3]?._id || rondaUsers[0]._id],
       assignedOfficerNames: [rondaUsers[3]?.name || rondaUsers[0].name],
       requiredCheckpoints: getCheckpoints('rt10Checkpoints'),
@@ -200,6 +218,7 @@ export const seedPatrolSchedules = async (
       shift: PatrolShift.SIANG,
       regionId: rt10?._id || rt01._id,
       regionName: rt10 ? 'RT 10' : 'RT 01',
+      ...getScope(rt10 || rt01),
       assignedOfficers: [rondaUsers[3]?._id || rondaUsers[0]._id],
       assignedOfficerNames: [rondaUsers[3]?.name || rondaUsers[0].name],
       requiredCheckpoints: getCheckpoints('rt10Checkpoints'),

@@ -22,6 +22,13 @@ export const seedPatrolLogs = async (
 
   const { completedSchedule, inProgressSchedule } = schedules;
 
+  // Helper to get region scope from schedule
+  const getLogScope = (schedule: any) => ({
+    desa: schedule?.desa,
+    rw: schedule?.rw,
+    rt: schedule?.rt,
+  });
+
   // Gather all checkpoint arrays
   const allCheckpointArrays: any[] = [];
   for (const key of Object.keys(checkpoints)) {
@@ -48,6 +55,7 @@ export const seedPatrolLogs = async (
       checkpointId: checkpoint._id,
       checkpointName: checkpoint.name,
       checkpointCode: checkpoint.code,
+      ...getLogScope(completedSchedule),
       scannedBy: rondaUsers[0]._id,
       scannedByName: rondaUsers[0].name,
       scannedAt: baseTime,
@@ -68,6 +76,7 @@ export const seedPatrolLogs = async (
       checkpointId: allCheckpointArrays[0]._id,
       checkpointName: allCheckpointArrays[0].name,
       checkpointCode: allCheckpointArrays[0].code,
+      ...getLogScope(inProgressSchedule),
       scannedBy: rondaUsers[0]._id,
       scannedByName: rondaUsers[0].name,
       scannedAt: inProgressSchedule.startTime,
@@ -88,6 +97,7 @@ export const seedPatrolLogs = async (
       checkpointId: allCheckpointArrays[1]._id,
       checkpointName: allCheckpointArrays[1].name,
       checkpointCode: allCheckpointArrays[1].code,
+      ...getLogScope(completedSchedule),
       scannedBy: rondaUsers[0]._id,
       scannedByName: rondaUsers[0].name,
       scannedAt: new Date(completedSchedule.startTime.getTime() + 10 * 60 * 1000),
@@ -114,6 +124,7 @@ export const seedPatrolLogs = async (
         checkpointId: cp._id,
         checkpointName: cp.name,
         checkpointCode: cp.code,
+        ...getLogScope(completedSchedule),
         scannedBy: rondaUsers[i]._id,
         scannedByName: rondaUsers[i].name,
         scannedAt: scanTime,
@@ -135,6 +146,7 @@ export const seedPatrolLogs = async (
       checkpointId: allCheckpointArrays[0]._id,
       checkpointName: allCheckpointArrays[0].name,
       checkpointCode: allCheckpointArrays[0].code,
+      ...getLogScope(completedSchedule),
       scannedBy: rondaUsers[0]._id,
       scannedByName: rondaUsers[0].name,
       scannedAt: new Date(completedSchedule.startTime.getTime() + 5 * 60 * 1000),
@@ -161,6 +173,7 @@ export const seedPatrolLogs = async (
       checkpointId: cp._id,
       checkpointName: cp.name,
       checkpointCode: cp.code,
+      ...getLogScope(completedSchedule),
       scannedBy: rondaUsers[rondaIdx]._id,
       scannedByName: rondaUsers[rondaIdx].name,
       scannedAt: scanTime,

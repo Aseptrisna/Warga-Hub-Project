@@ -31,6 +31,16 @@ export class PatrolLog extends BaseSchema {
   @Prop({ type: String, required: true })
   checkpointId: string; // Checkpoint ID
 
+  // Region scoping (derived from schedule)
+  @Prop()
+  desa?: string;
+
+  @Prop()
+  rw?: string;
+
+  @Prop()
+  rt?: string;
+
   @Prop()
   checkpointName?: string;
 
@@ -87,3 +97,4 @@ export const PatrolLogSchema = SchemaFactory.createForClass(PatrolLog);
 PatrolLogSchema.index({ scheduleId: 1, scannedAt: -1 });
 PatrolLogSchema.index({ checkpointId: 1, scannedAt: -1 });
 PatrolLogSchema.index({ scannedBy: 1, scannedAt: -1 });
+PatrolLogSchema.index({ desa: 1, rw: 1, rt: 1 });

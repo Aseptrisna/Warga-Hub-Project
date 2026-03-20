@@ -23,6 +23,18 @@ export class CreatePatrolCheckpointDto {
 
   @IsNotEmpty()
   @IsString()
+  desa: string;
+
+  @IsOptional()
+  @IsString()
+  rw?: string;
+
+  @IsOptional()
+  @IsString()
+  rt?: string;
+
+  @IsNotEmpty()
+  @IsString()
   address: string;
 
   @IsOptional()
