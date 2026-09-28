@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { citizensService } from '../../services/citizens.service';
+import { resolveFileUrl } from '../../utils/file-url';
 import { useAuthStore } from '../../stores/auth.store';
 import { RoleLabels } from '@shared/role.enum';
 import { User, Camera, FileText, Save, Loader2, Upload, Check } from 'lucide-react';
@@ -33,7 +34,6 @@ export default function MyProfilePage() {
   });
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
 
-  const apiBaseUrl = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:3000';
 
   useEffect(() => {
     loadProfile();
@@ -137,7 +137,7 @@ export default function MyProfilePage() {
           <div className="relative">
             <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
               {citizen.fotoUrl ? (
-                <img src={`${apiBaseUrl}${citizen.fotoUrl}`} alt="Foto" className="w-full h-full object-cover" />
+                <img src={resolveFileUrl(citizen.fotoUrl)} alt="Foto" className="w-full h-full object-cover" />
               ) : (
                 <User className="w-12 h-12 text-gray-400" />
               )}
@@ -312,7 +312,7 @@ export default function MyProfilePage() {
                   {hasDoc ? (
                     <div className="mb-3">
                       <a
-                        href={`${apiBaseUrl}${citizen[doc.field]}`}
+                        href={resolveFileUrl(citizen[doc.field])}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center text-xs text-primary-600 hover:text-primary-700 font-medium"

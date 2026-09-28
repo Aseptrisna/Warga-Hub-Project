@@ -59,4 +59,19 @@ export const paymentsService = {
     const response = await api.post('/payments/generate-bulk', data);
     return response.data;
   },
+
+  async createQris(id: string) {
+    const response = await api.post(`/payments/${id}/qris`);
+    return response.data;
+  },
+
+  async getQrisStatus(id: string) {
+    const response = await api.get(`/payments/${id}/qris-status`);
+    return response.data;
+  },
+
+  async sendReminders() {
+    const response = await api.post('/payments/send-reminders');
+    return response.data;
+  },
 };

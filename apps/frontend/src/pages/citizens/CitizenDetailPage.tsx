@@ -6,6 +6,7 @@ import {
   Trash2, UserCircle, Upload, Shield
 } from 'lucide-react';
 import { citizensService } from '../../services/citizens.service';
+import { resolveFileUrl } from '../../utils/file-url';
 import { useAuthStore } from '../../stores/auth.store';
 import { Role } from '@shared/role.enum';
 import { canPerformAction } from '../../config/permissions';
@@ -63,7 +64,6 @@ interface Citizen {
   updatedAt: string;
 }
 
-const API_BASE = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:3000';
 
 // Document type configurations
 const DOCUMENT_TYPES = [
@@ -201,13 +201,13 @@ export default function CitizenDetailPage() {
         {url ? (
           <div className="mt-2">
             {url.endsWith('.pdf') ? (
-              <a href={`${API_BASE}${url}`} target="_blank" rel="noopener noreferrer"
+              <a href={resolveFileUrl(url)} target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm">
                 <FileText className="w-4 h-4" /> Lihat PDF
               </a>
             ) : (
-              <a href={`${API_BASE}${url}`} target="_blank" rel="noopener noreferrer">
-                <img src={`${API_BASE}${url}`} alt={docType.label} className="w-full rounded border border-gray-200 max-h-48 object-contain" />
+              <a href={resolveFileUrl(url)} target="_blank" rel="noopener noreferrer">
+                <img src={resolveFileUrl(url)} alt={docType.label} className="w-full rounded border border-gray-200 max-h-48 object-contain" />
               </a>
             )}
           </div>
@@ -241,7 +241,7 @@ export default function CitizenDetailPage() {
             <div className="relative group">
               <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg overflow-hidden">
                 {citizen.fotoUrl ? (
-                  <img src={`${API_BASE}${citizen.fotoUrl}`} alt={citizen.namaLengkap} className="w-full h-full object-cover" />
+                  <img src={resolveFileUrl(citizen.fotoUrl)} alt={citizen.namaLengkap} className="w-full h-full object-cover" />
                 ) : (
                   <UserCircle className="w-16 h-16" />
                 )}

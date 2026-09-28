@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../stores/auth.store';
-import { RoleLabels } from '@shared/role.enum';
+import { Role, RoleLabels } from '@shared/role.enum';
 import {
   LayoutDashboard,
   MapPin,
@@ -26,39 +26,41 @@ import {
   UserCheck,
   Building,
   Globe,
+  ShieldCheck,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { canAccessPath } from '../../config/permissions';
+import { MENU_ITEMS } from '../../config/menu-items';
+import { customRolesService } from '../../services/custom-roles.service';
 import NotificationBell from '../notifications/NotificationBell';
 
-interface MenuItem {
-  name: string;
-  path: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
+const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  '/dashboard': LayoutDashboard,
+  '/my-profile': User,
+  '/regions': MapPin,
+  '/citizens': Users,
+  '/families': Home,
+  '/letters': FileText,
+  '/finance': Wallet,
+  '/expenses': Receipt,
+  '/guestbook': BookOpen,
+  '/patrol': Shield,
+  '/announcements': Megaphone,
+  '/reports': Flag,
+  '/events': Calendar,
+  '/panic': AlertCircle,
+  '/desa/profile': Building,
+  '/desa/landing': Globe,
+  '/admin/activations': UserCheck,
+  '/audit-logs': ClipboardList,
+  '/admin/users': UserCog,
+  '/admin/roles': ShieldCheck,
+  '/settings': Settings,
+};
 
-const menuItems: MenuItem[] = [
-  { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-  { name: 'Profil Saya', path: '/my-profile', icon: User },
-  { name: 'Wilayah', path: '/regions', icon: MapPin },
-  { name: 'Data Warga', path: '/citizens', icon: Users },
-  { name: 'Kartu Keluarga', path: '/families', icon: Home },
-  { name: 'Surat Menyurat', path: '/letters', icon: FileText },
-  { name: 'Iuran Warga', path: '/finance', icon: Wallet },
-  { name: 'Pengeluaran', path: '/expenses', icon: Receipt },
-  { name: 'Buku Tamu', path: '/guestbook', icon: BookOpen },
-  { name: 'Patroli Ronda', path: '/patrol', icon: Shield },
-  { name: 'Pengumuman', path: '/announcements', icon: Megaphone },
-  { name: 'Laporan', path: '/reports', icon: Flag },
-  { name: 'Event', path: '/events', icon: Calendar },
-  { name: 'Panic Button', path: '/panic', icon: AlertCircle },
-  { name: 'Profil Desa', path: '/desa/profile', icon: Building },
-  { name: 'Landing Page', path: '/desa/landing', icon: Globe },
-  { name: 'Aktivasi Warga', path: '/admin/activations', icon: UserCheck },
-  { name: 'Audit Log', path: '/audit-logs', icon: ClipboardList },
-  { name: 'Manajemen User', path: '/admin/users', icon: UserCog },
-  { name: 'Pengaturan', path: '/settings', icon: Settings },
-];
+const menuItems = MENU_ITEMS.map((item) => ({ ...item, icon: ICONS[item.path] || Home }));
+
+const BUILT_IN_ROLES = new Set<string>(Object.values(Role));
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -68,6 +70,30 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
   const { user, logout } = useAuthStore();
+
+  // Non-built-in role codes are custom roles (see modules/custom-roles):
+  // their sidebar visibility comes from the role's own menuPaths, not the
+  // static config in config/permissions.ts.
+  const [customMenu, setCustomMenu] = useState<{ menuPaths: string[]; label: string } | null>(null);
+
+  useEffect(() => {
+    if (user?.role && !BUILT_IN_ROLES.has(user.role)) {
+      customRolesService
+        .getMyMenu()
+        .then((res) => setCustomMenu(res))
+        .catch(() => setCustomMenu({ menuPaths: [], label: user.role }));
+    } else {
+      setCustomMenu(null);
+    }
+  }, [user?.role]);
+
+  const roleLabel = user?.role ? RoleLabels[user.role] || customMenu?.label || user.role : '';
+
+  const visibleMenuItems = menuItems.filter((item) => {
+    if (!user?.role) return false;
+    if (customMenu) return customMenu.menuPaths.includes(item.path);
+    return canAccessPath(user.role, item.path);
+  });
 
   const handleLogout = () => {
     logout();
@@ -87,8 +113,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Logo */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
-            <Home className="w-8 h-8 text-primary-600" />
-            <span className="text-xl font-bold text-gray-900">WargaHub</span>
+            <Home className="w-6 h-6 text-primary-600" />
+            <span className="text-base font-semibold text-gray-900">WargaHub</span>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -106,16 +132,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-gray-900 truncate">{user?.name}</p>
-              <p className="text-xs text-gray-500 truncate">
-                {user?.role && RoleLabels[user.role]}
-              </p>
+              <p className="text-xs text-gray-500 truncate">{roleLabel}</p>
             </div>
           </div>
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 min-h-0 overflow-y-auto p-4 space-y-1">
-          {menuItems.filter((item) => !user?.role || canAccessPath(user.role, item.path)).map((item) => {
+          {visibleMenuItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, FileText, Edit, Trash2, ToggleLeft, ToggleRight, Eye } from 'lucide-react';
+import { Plus, FileText, Edit, Trash2, ToggleLeft, ToggleRight, Eye, X } from 'lucide-react';
 import { letterTemplatesService, LetterTemplate } from '../../services/letters.service';
 
 const LetterTemplatesPage = () => {
@@ -189,7 +189,7 @@ const LetterTemplatesPage = () => {
                   }}
                   className="text-gray-400 hover:text-gray-600"
                 >
-                  ✕
+                  <X className="w-5 h-5" />
                 </button>
               </div>
             </div>

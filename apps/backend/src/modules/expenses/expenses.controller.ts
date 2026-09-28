@@ -14,9 +14,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { s3Storage } from '../../common/services/s3-storage';
 import { ExpensesService } from './expenses.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
@@ -27,13 +25,7 @@ import { Role } from '../../common/enums/role.enum';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { getRegionScope } from '../../common/helpers/region-scope.helper';
 
-const expenseStorage = diskStorage({
-  destination: './uploads/expenses',
-  filename: (req, file, cb) => {
-    const uniqueName = `bukti-${uuidv4()}${extname(file.originalname)}`;
-    cb(null, uniqueName);
-  },
-});
+const expenseStorage = s3Storage('expenses');
 
 const docFilter = (req: any, file: any, cb: any) => {
   if (file.mimetype.match(/\/(jpg|jpeg|png|pdf)$/)) {
@@ -118,7 +110,6 @@ export class ExpensesController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { storage: expenseStorage, fileFilter: docFilter, limits: { fileSize: 5 * 1024 * 1024 } }))
   async uploadBukti(@Param('id') id: string, @UploadedFile() file: Express.Multer.File) {
-    const fileUrl = `/uploads/expenses/${file.filename}`;
-    return this.expensesService.update(id, { buktiUrl: fileUrl } as any);
+    return this.expensesService.update(id, { buktiUrl: (file as any).location } as any);
   }
 }

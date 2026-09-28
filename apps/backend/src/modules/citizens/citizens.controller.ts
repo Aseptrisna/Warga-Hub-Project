@@ -11,16 +11,16 @@ import {
   UseInterceptors,
   UploadedFile,
   Res,
+  Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { s3Storage } from '../../common/services/s3-storage';
 import { Response } from 'express';
 import { CitizensService } from './citizens.service';
 import { CreateCitizenDto } from './dto/create-citizen.dto';
 import { UpdateCitizenDto } from './dto/update-citizen.dto';
+import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -44,13 +44,7 @@ const docFilter = (req: any, file: any, cb: any) => {
   }
 };
 
-const citizenStorage = diskStorage({
-  destination: './uploads/citizens',
-  filename: (req, file, cb) => {
-    const uniqueName = `doc-${uuidv4()}${extname(file.originalname)}`;
-    cb(null, uniqueName);
-  },
-});
+const citizenStorage = s3Storage('citizens');
 
 // Roles that can manage citizen data (matching frontend permissions.ts)
 const CITIZEN_MANAGE_ROLES = [
@@ -69,6 +63,8 @@ const CITIZEN_DELETE_ROLES = [
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class CitizensController {
+  private readonly logger = new Logger(CitizensController.name);
+
   constructor(private readonly citizensService: CitizensService) {}
 
   // Helper: resolve citizen ID from user (citizenId or NIK fallback)
@@ -78,7 +74,9 @@ export class CitizensController {
       try {
         const citizen = await this.citizensService.findByNik(user.nik);
         return citizen?._id || null;
-      } catch {
+      } catch (err) {
+        // Expected when the user's NIK has no matching citizen record yet.
+        this.logger.debug(`No citizen found for NIK ${user.nik}: ${(err as Error).message}`);
         return null;
       }
     }
@@ -99,7 +97,7 @@ export class CitizensController {
 
   @Patch('my-profile')
   @ApiOperation({ summary: 'Update limited fields of my profile' })
-  async updateMyProfile(@CurrentUser() user: any, @Body() body: any) {
+  async updateMyProfile(@CurrentUser() user: any, @Body() body: UpdateMyProfileDto) {
     const citizenId = await this.resolveCitizenId(user);
     if (!citizenId) {
       return { message: 'Data kependudukan belum terhubung', data: null };
@@ -126,7 +124,7 @@ export class CitizensController {
   async uploadMyPhoto(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
     const citizenId = await this.resolveCitizenId(user);
     if (!citizenId) return { message: 'Data kependudukan belum terhubung' };
-    const fileUrl = `/uploads/citizens/${file.filename}`;
+    const fileUrl = (file as any).location;
     return this.citizensService.update(citizenId, { fotoUrl: fileUrl } as any);
   }
 
@@ -137,7 +135,7 @@ export class CitizensController {
   async uploadMyKtp(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
     const citizenId = await this.resolveCitizenId(user);
     if (!citizenId) return { message: 'Data kependudukan belum terhubung' };
-    const fileUrl = `/uploads/citizens/${file.filename}`;
+    const fileUrl = (file as any).location;
     return this.citizensService.update(citizenId, { ktpUrl: fileUrl } as any);
   }
 
@@ -148,7 +146,7 @@ export class CitizensController {
   async uploadMyKk(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
     const citizenId = await this.resolveCitizenId(user);
     if (!citizenId) return { message: 'Data kependudukan belum terhubung' };
-    const fileUrl = `/uploads/citizens/${file.filename}`;
+    const fileUrl = (file as any).location;
     return this.citizensService.update(citizenId, { kkUrl: fileUrl } as any);
   }
 
@@ -159,7 +157,7 @@ export class CitizensController {
   async uploadMyAkta(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
     const citizenId = await this.resolveCitizenId(user);
     if (!citizenId) return { message: 'Data kependudukan belum terhubung' };
-    const fileUrl = `/uploads/citizens/${file.filename}`;
+    const fileUrl = (file as any).location;
     return this.citizensService.update(citizenId, { aktaLahirUrl: fileUrl } as any);
   }
 
@@ -170,7 +168,7 @@ export class CitizensController {
   async uploadMySuratNikah(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
     const citizenId = await this.resolveCitizenId(user);
     if (!citizenId) return { message: 'Data kependudukan belum terhubung' };
-    const fileUrl = `/uploads/citizens/${file.filename}`;
+    const fileUrl = (file as any).location;
     return this.citizensService.update(citizenId, { suratNikahUrl: fileUrl } as any);
   }
 
@@ -181,7 +179,7 @@ export class CitizensController {
   async uploadMyIjazah(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
     const citizenId = await this.resolveCitizenId(user);
     if (!citizenId) return { message: 'Data kependudukan belum terhubung' };
-    const fileUrl = `/uploads/citizens/${file.filename}`;
+    const fileUrl = (file as any).location;
     return this.citizensService.update(citizenId, { ijazahUrl: fileUrl } as any);
   }
 
@@ -192,7 +190,7 @@ export class CitizensController {
   async uploadMyBpjs(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
     const citizenId = await this.resolveCitizenId(user);
     if (!citizenId) return { message: 'Data kependudukan belum terhubung' };
-    const fileUrl = `/uploads/citizens/${file.filename}`;
+    const fileUrl = (file as any).location;
     return this.citizensService.update(citizenId, { bpjsKesehatanUrl: fileUrl } as any);
   }
 
@@ -203,7 +201,7 @@ export class CitizensController {
   async uploadMyBpjsTK(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
     const citizenId = await this.resolveCitizenId(user);
     if (!citizenId) return { message: 'Data kependudukan belum terhubung' };
-    const fileUrl = `/uploads/citizens/${file.filename}`;
+    const fileUrl = (file as any).location;
     return this.citizensService.update(citizenId, { bpjsKetenagakerjaanUrl: fileUrl } as any);
   }
 
@@ -214,7 +212,7 @@ export class CitizensController {
   async uploadMyVaksin(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
     const citizenId = await this.resolveCitizenId(user);
     if (!citizenId) return { message: 'Data kependudukan belum terhubung' };
-    const fileUrl = `/uploads/citizens/${file.filename}`;
+    const fileUrl = (file as any).location;
     return this.citizensService.update(citizenId, { vaksinUrl: fileUrl } as any);
   }
 
@@ -225,7 +223,7 @@ export class CitizensController {
   async uploadMySkck(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
     const citizenId = await this.resolveCitizenId(user);
     if (!citizenId) return { message: 'Data kependudukan belum terhubung' };
-    const fileUrl = `/uploads/citizens/${file.filename}`;
+    const fileUrl = (file as any).location;
     return this.citizensService.update(citizenId, { skckUrl: fileUrl } as any);
   }
 
@@ -335,7 +333,7 @@ export class CitizensController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { storage: citizenStorage, fileFilter: imageFilter, limits: { fileSize: 5 * 1024 * 1024 } }))
   async uploadPhoto(@Param('id') id: string, @UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
-    const fileUrl = `/uploads/citizens/${file.filename}`;
+    const fileUrl = (file as any).location;
     return this.citizensService.update(id, { fotoUrl: fileUrl } as any, user);
   }
 
@@ -345,7 +343,7 @@ export class CitizensController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { storage: citizenStorage, fileFilter: docFilter, limits: { fileSize: 5 * 1024 * 1024 } }))
   async uploadKTP(@Param('id') id: string, @UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
-    const fileUrl = `/uploads/citizens/${file.filename}`;
+    const fileUrl = (file as any).location;
     return this.citizensService.update(id, { ktpUrl: fileUrl } as any, user);
   }
 
@@ -355,7 +353,7 @@ export class CitizensController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { storage: citizenStorage, fileFilter: docFilter, limits: { fileSize: 5 * 1024 * 1024 } }))
   async uploadKK(@Param('id') id: string, @UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
-    const fileUrl = `/uploads/citizens/${file.filename}`;
+    const fileUrl = (file as any).location;
     return this.citizensService.update(id, { kkUrl: fileUrl } as any, user);
   }
 
@@ -365,7 +363,7 @@ export class CitizensController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { storage: citizenStorage, fileFilter: docFilter, limits: { fileSize: 5 * 1024 * 1024 } }))
   async uploadAkta(@Param('id') id: string, @UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
-    const fileUrl = `/uploads/citizens/${file.filename}`;
+    const fileUrl = (file as any).location;
     return this.citizensService.update(id, { aktaLahirUrl: fileUrl } as any, user);
   }
 
@@ -375,7 +373,7 @@ export class CitizensController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { storage: citizenStorage, fileFilter: docFilter, limits: { fileSize: 5 * 1024 * 1024 } }))
   async uploadSuratNikah(@Param('id') id: string, @UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
-    const fileUrl = `/uploads/citizens/${file.filename}`;
+    const fileUrl = (file as any).location;
     return this.citizensService.update(id, { suratNikahUrl: fileUrl } as any, user);
   }
 
@@ -385,7 +383,7 @@ export class CitizensController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { storage: citizenStorage, fileFilter: docFilter, limits: { fileSize: 5 * 1024 * 1024 } }))
   async uploadIjazah(@Param('id') id: string, @UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
-    const fileUrl = `/uploads/citizens/${file.filename}`;
+    const fileUrl = (file as any).location;
     return this.citizensService.update(id, { ijazahUrl: fileUrl } as any, user);
   }
 
@@ -395,7 +393,7 @@ export class CitizensController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { storage: citizenStorage, fileFilter: docFilter, limits: { fileSize: 5 * 1024 * 1024 } }))
   async uploadBpjsKesehatan(@Param('id') id: string, @UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
-    const fileUrl = `/uploads/citizens/${file.filename}`;
+    const fileUrl = (file as any).location;
     return this.citizensService.update(id, { bpjsKesehatanUrl: fileUrl } as any, user);
   }
 
@@ -405,7 +403,7 @@ export class CitizensController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { storage: citizenStorage, fileFilter: docFilter, limits: { fileSize: 5 * 1024 * 1024 } }))
   async uploadVaksin(@Param('id') id: string, @UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
-    const fileUrl = `/uploads/citizens/${file.filename}`;
+    const fileUrl = (file as any).location;
     return this.citizensService.update(id, { vaksinUrl: fileUrl } as any, user);
   }
 
@@ -415,7 +413,7 @@ export class CitizensController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { storage: citizenStorage, fileFilter: docFilter, limits: { fileSize: 5 * 1024 * 1024 } }))
   async uploadSkck(@Param('id') id: string, @UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
-    const fileUrl = `/uploads/citizens/${file.filename}`;
+    const fileUrl = (file as any).location;
     return this.citizensService.update(id, { skckUrl: fileUrl } as any, user);
   }
 }

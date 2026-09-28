@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { PanicAlert, PanicStatus } from './schemas/panic-alert.schema';
@@ -7,6 +7,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class PanicService {
+  private readonly logger = new Logger(PanicService.name);
+
   constructor(
     @InjectModel(PanicAlert.name) private panicModel: Model<PanicAlert>,
     private readonly auditService: AuditService,
@@ -48,7 +50,7 @@ export class PanicService {
         referenceId: alert._id,
         referenceUrl: `/panic/${alert._id}`,
       },
-    );
+    ).catch((err) => this.logger.error('Failed to notify RT/petugas ronda of panic alert', err));
 
     return { message: 'PANIC ALERT terkirim!', data: alert };
   }
@@ -83,7 +85,7 @@ export class PanicService {
     if (filter?.rw) match.rw = filter.rw;
     if (filter?.rt) match.rt = filter.rt;
 
-    const alerts = await this.panicModel.find(match).sort({ createdAt: -1 });
+    const alerts = await this.panicModel.find(match).sort({ createdAt: -1 }).limit(200);
     return { data: alerts, total: alerts.length };
   }
 

@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ScheduleModule } from '@nestjs/schedule';
+import { EmailModule } from './common/services/email.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
@@ -23,6 +25,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { IuranTypesModule } from './modules/iuran-types/iuran-types.module';
+import { CustomRolesModule } from './modules/custom-roles/custom-roles.module';
 
 @Module({
   imports: [
@@ -38,7 +41,12 @@ import { IuranTypesModule } from './modules/iuran-types/iuran-types.module';
       autoIndex: true,
     }),
 
+    // Cron jobs (e.g. iuran due-date reminders)
+    ScheduleModule.forRoot(),
+    EmailModule,
+
     // Feature modules
+    CustomRolesModule,
     AuthModule,
     UsersModule,
     RegionsModule,

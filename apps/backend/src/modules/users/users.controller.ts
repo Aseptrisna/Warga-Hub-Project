@@ -78,7 +78,7 @@ export class UsersController {
 
   @Patch(':id/role')
   @Roles(Role.SUPER_ADMIN)
-  changeRole(@Param('id') id: string, @Body('role') role: Role) {
+  changeRole(@Param('id') id: string, @Body('role') role: string) {
     return this.service.changeRole(id, role);
   }
 

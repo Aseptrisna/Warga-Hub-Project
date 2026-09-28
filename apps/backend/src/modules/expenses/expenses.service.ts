@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Expense } from './schemas/expense.schema';
@@ -9,6 +9,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ExpensesService {
+  private readonly logger = new Logger(ExpensesService.name);
+
   constructor(
     @InjectModel(Expense.name) private expenseModel: Model<Expense>,
     private readonly auditService: AuditService,
@@ -153,7 +155,7 @@ export class ExpensesService {
         module: 'expenses',
         referenceId: expense._id,
         referenceUrl: `/expenses/${expense._id}`,
-      });
+      }).catch((err) => this.logger.error('Failed to notify creator of expense approval', err));
     }
 
     return {
@@ -197,7 +199,7 @@ export class ExpensesService {
         module: 'expenses',
         referenceId: expense._id,
         referenceUrl: `/expenses/${expense._id}`,
-      });
+      }).catch((err) => this.logger.error('Failed to notify creator of expense rejection', err));
     }
 
     return {

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { PatrolLog, PatrolLogDocument, ScanStatus } from './schemas/patrol-log.schema';
@@ -9,6 +9,8 @@ import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class PatrolLogsService {
+  private readonly logger = new Logger(PatrolLogsService.name);
+
   constructor(
     @InjectModel(PatrolLog.name) private logModel: Model<PatrolLogDocument>,
     @InjectModel(PatrolSchedule.name) private scheduleModel: Model<PatrolScheduleDocument>,
@@ -258,6 +260,7 @@ export class PatrolLogsService {
 
       return { isValid: true, message: 'Valid QR code' };
     } catch (error) {
+      this.logger.debug(`QR code validation failed: ${(error as Error).message}`);
       return { isValid: false, message: 'Invalid QR code format' };
     }
   }

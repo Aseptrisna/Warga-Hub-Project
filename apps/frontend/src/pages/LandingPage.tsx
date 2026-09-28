@@ -1,712 +1,465 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth.store';
-import {
-  Users,
-  FileText,
-  Wallet,
-  Shield,
-  Megaphone,
-  AlertTriangle,
-  CalendarDays,
-  BookOpen,
-  BarChart3,
-  ClipboardList,
-  Zap,
-  Lock,
-  Globe,
-  Gift,
-  ChevronRight,
-  Menu,
-  X,
-  Phone,
-  Mail,
-  MapPin,
-  ArrowRight,
-  QrCode,
-  Cctv,
-  Siren,
-  ShoppingBag,
-  Vote,
-  Map,
-  MessageCircle,
-  Rocket,
-} from 'lucide-react';
+import { ArrowRight, Check, Menu, X, QrCode, MapPin, FileText } from 'lucide-react';
 
-// ─── Scroll Reveal Hook ───
-function useScrollReveal() {
-  const ref = useRef<HTMLDivElement>(null);
-  const [isVisible, setIsVisible] = useState(false);
+const NAV = [
+  { id: 'fitur', label: 'Fitur' },
+  { id: 'peran', label: 'Untuk siapa' },
+  { id: 'mulai', label: 'Cara mulai' },
+];
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.unobserve(el);
-        }
-      },
-      { threshold: 0.15 }
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  return { ref, isVisible };
+function scrollTo(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// ─── Data ───
-const features = [
-  { icon: Users, label: 'Data Warga', desc: 'Kelola data warga & keluarga secara digital', color: 'bg-blue-100 text-blue-600' },
-  { icon: FileText, label: 'Surat Menyurat', desc: 'Buat surat otomatis dengan template dinamis', color: 'bg-emerald-100 text-emerald-600' },
-  { icon: Wallet, label: 'Iuran & Keuangan', desc: 'Catat iuran, pengeluaran & laporan keuangan', color: 'bg-amber-100 text-amber-600' },
-  { icon: Shield, label: 'Ronda & Keamanan', desc: 'QR checkpoint & jadwal ronda digital', color: 'bg-red-100 text-red-600' },
-  { icon: Megaphone, label: 'Pengumuman', desc: 'Broadcast info ke seluruh warga', color: 'bg-purple-100 text-purple-600' },
-  { icon: ClipboardList, label: 'Laporan', desc: 'Laporan warga real-time & terpusat', color: 'bg-indigo-100 text-indigo-600' },
-  { icon: CalendarDays, label: 'Event & Kegiatan', desc: 'Kelola acara desa dan partisipasi warga', color: 'bg-pink-100 text-pink-600' },
-  { icon: AlertTriangle, label: 'Panic Button', desc: 'Tombol darurat dengan notifikasi instan', color: 'bg-orange-100 text-orange-600' },
-  { icon: BookOpen, label: 'Buku Tamu', desc: 'Pencatatan tamu desa secara digital', color: 'bg-teal-100 text-teal-600' },
-  { icon: BarChart3, label: 'Dashboard Analitik', desc: 'Statistik & grafik data desa real-time', color: 'bg-cyan-100 text-cyan-600' },
+/* ───────────────────────── Product mockups ───────────────────────── */
+
+function WindowFrame({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
+      <div className="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 py-2.5">
+        <span className="h-2.5 w-2.5 rounded-full bg-gray-300" />
+        <span className="h-2.5 w-2.5 rounded-full bg-gray-300" />
+        <span className="h-2.5 w-2.5 rounded-full bg-gray-300" />
+        <span className="ml-2 truncate text-xs text-gray-500">{title}</span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+const MATRIX = [
+  { nama: 'Budi Santoso', status: ['L', 'L', 'L', 'B'] },
+  { nama: 'Siti Aminah', status: ['L', 'L', 'L', 'L'] },
+  { nama: 'Ahmad Fauzi', status: ['L', 'B', 'B', 'B'] },
+  { nama: 'Dewi Lestari', status: ['L', 'L', 'Q', 'L'] },
+  { nama: 'Rudi Hartono', status: ['L', 'L', 'L', 'B'] },
 ];
 
-const comingSoonFeatures = [
-  { icon: QrCode, label: 'Pembayaran QRIS/VA', desc: 'Bayar iuran via QRIS & Virtual Account instan', color: 'bg-lime-100 text-lime-600' },
-  { icon: Cctv, label: 'CCTV Desa', desc: 'Integrasi & monitoring CCTV seluruh wilayah desa', color: 'bg-slate-100 text-slate-600' },
-  { icon: Siren, label: 'Early Warning System', desc: 'Deteksi dini banjir, kebakaran & pencurian', color: 'bg-rose-100 text-rose-600' },
-  { icon: ShoppingBag, label: 'Marketplace Desa', desc: 'Jual beli produk UMKM & hasil bumi desa', color: 'bg-violet-100 text-violet-600' },
-  { icon: Vote, label: 'E-Voting Online', desc: 'Voting & musyawarah desa secara digital', color: 'bg-sky-100 text-sky-600' },
-  { icon: Map, label: 'Peta Digital Desa', desc: 'Peta interaktif wilayah RT, RW & fasilitas desa', color: 'bg-fuchsia-100 text-fuchsia-600' },
-  { icon: MessageCircle, label: 'WhatsApp Bot', desc: 'Notifikasi otomatis & layanan via WhatsApp', color: 'bg-green-100 text-green-600' },
+function IuranMockup() {
+  const cell = (s: string) => {
+    if (s === 'L') return <span className="inline-block rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700">Lunas</span>;
+    if (s === 'Q') return <span className="inline-block rounded border border-primary-200 bg-primary-50 px-1.5 py-0.5 text-[11px] font-medium text-primary-700">QRIS</span>;
+    return <span className="inline-block rounded border border-gray-200 bg-white px-1.5 py-0.5 text-[11px] font-medium text-gray-500">Belum</span>;
+  };
+  return (
+    <WindowFrame title="Iuran Warga · RT 03 / RW 02 · Desa Sukamaju">
+      <div className="p-4 sm:p-5">
+        <div className="mb-4 grid grid-cols-3 gap-3">
+          {[
+            ['Terkumpul', 'Rp 1.840.000'],
+            ['Belum bayar', '7 KK'],
+            ['Via QRIS', '12 transaksi'],
+          ].map(([k, v]) => (
+            <div key={k} className="rounded-md border border-gray-200 px-3 py-2">
+              <p className="text-[11px] text-gray-500">{k}</p>
+              <p className="mt-0.5 text-sm font-semibold text-gray-900">{v}</p>
+            </div>
+          ))}
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[420px] text-left text-xs">
+            <thead>
+              <tr className="border-b border-gray-200 text-gray-500">
+                <th className="py-2 pr-3 font-medium">Kepala keluarga</th>
+                <th className="py-2 pr-3 font-medium">Keamanan</th>
+                <th className="py-2 pr-3 font-medium">Sampah</th>
+                <th className="py-2 pr-3 font-medium">Kas RT</th>
+                <th className="py-2 font-medium">Sosial</th>
+              </tr>
+            </thead>
+            <tbody>
+              {MATRIX.map((r) => (
+                <tr key={r.nama} className="border-b border-gray-100 last:border-0">
+                  <td className="py-2 pr-3 text-gray-900">{r.nama}</td>
+                  {r.status.map((s, i) => (
+                    <td key={i} className="py-2 pr-3">{cell(s)}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </WindowFrame>
+  );
+}
+
+function SuratMockup() {
+  const steps = [
+    { who: 'Ketua RT 03', when: 'Sen, 08.14', done: true },
+    { who: 'Ketua RW 02', when: 'Sen, 10.02', done: true },
+    { who: 'Kepala Desa', when: 'Menunggu', done: false },
+  ];
+  return (
+    <WindowFrame title="Surat Keterangan Domisili · No. 470/112/SKM/IX/2026">
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-gray-900">Siti Aminah</p>
+            <p className="text-xs text-gray-500">Diajukan dari HP · Senin, 07.52</p>
+          </div>
+          <span className="rounded border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">Tahap 3 dari 3</span>
+        </div>
+        <ol className="mt-5 space-y-0">
+          {steps.map((s, i) => (
+            <li key={s.who} className="relative flex gap-3 pb-5 last:pb-0">
+              {i < steps.length - 1 && <span className="absolute left-[9px] top-5 h-full w-px bg-gray-200" aria-hidden />}
+              <span className={`relative mt-0.5 flex h-[19px] w-[19px] shrink-0 items-center justify-center rounded-full border ${s.done ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300 bg-white'}`}>
+                {s.done && <Check className="h-3 w-3" strokeWidth={3} />}
+              </span>
+              <div className="flex flex-1 justify-between gap-2 text-sm">
+                <span className={s.done ? 'text-gray-900' : 'text-gray-500'}>{s.who}</span>
+                <span className="text-xs text-gray-500">{s.when}</span>
+              </div>
+            </li>
+          ))}
+        </ol>
+        <div className="mt-5 flex items-center gap-3 rounded-md border border-dashed border-gray-300 px-3 py-2.5">
+          <FileText className="h-4 w-4 text-gray-400" />
+          <p className="flex-1 text-xs text-gray-600">PDF bertanda QR terbit otomatis setelah disetujui</p>
+          <QrCode className="h-5 w-5 text-gray-400" />
+        </div>
+      </div>
+    </WindowFrame>
+  );
+}
+
+function RondaMockup() {
+  const logs = [
+    ['23.05', 'Pos Ronda Utama', 'Hendra, Joko'],
+    ['23.41', 'Gerbang Blok C', 'Hendra, Joko'],
+    ['00.18', 'Musala Al-Ikhlas', 'Hendra, Joko'],
+    ['00.52', 'Lapangan Voli', '—'],
+  ];
+  return (
+    <WindowFrame title="Patroli Ronda · Malam ini · RW 02">
+      <div className="p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-sm font-semibold text-gray-900">3 dari 4 titik discan</p>
+          <div className="h-1.5 w-28 rounded-full bg-gray-100">
+            <div className="h-1.5 w-3/4 rounded-full bg-primary-600" />
+          </div>
+        </div>
+        <ul className="divide-y divide-gray-100">
+          {logs.map(([jam, titik, petugas]) => {
+            const missed = petugas === '—';
+            return (
+              <li key={titik} className="flex items-center gap-3 py-2.5 text-sm">
+                <span className="w-11 shrink-0 tabular-nums text-xs text-gray-500">{jam}</span>
+                <MapPin className={`h-4 w-4 shrink-0 ${missed ? 'text-gray-300' : 'text-primary-600'}`} />
+                <span className={`flex-1 ${missed ? 'text-gray-400' : 'text-gray-900'}`}>{titik}</span>
+                <span className={`text-xs ${missed ? 'text-amber-700' : 'text-gray-500'}`}>{missed ? 'Belum discan' : petugas}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </WindowFrame>
+  );
+}
+
+/* ───────────────────────── Page ───────────────────────── */
+
+const PROBLEMS = [
+  {
+    before: 'Iuran dicatat di buku tulis. Bendahara menagih dari pintu ke pintu, dan tidak ada yang tahu pasti siapa yang sudah bayar.',
+    after: 'Matriks iuran per KK, bayar lewat QRIS, dan pengingat email terkirim otomatis sebelum jatuh tempo.',
+  },
+  {
+    before: 'Warga bolak-balik ke rumah Pak RT, lalu ke RW, lalu ke kantor desa, hanya untuk satu surat pengantar.',
+    after: 'Warga mengajukan dari HP. Surat berjalan RT → RW → Desa, lalu terbit sebagai PDF bertanda QR.',
+  },
+  {
+    before: 'Jadwal ronda ada, tapi tidak ada yang tahu apakah petugas benar-benar berkeliling.',
+    after: 'Petugas memindai QR di tiap titik. Pengurus melihat titik mana yang terlewat malam itu.',
+  },
+  {
+    before: 'Saat rapat warga, laporan pemasukan dan pengeluaran sulit dipertanggungjawabkan.',
+    after: 'Pengeluaran lengkap dengan bukti foto, dan setiap perubahan data tercatat di audit log.',
+  },
 ];
 
-const steps = [
-  { num: 1, title: 'Admin Input Data', desc: 'Admin desa memasukkan data wilayah, warga, dan konfigurasi awal.' },
-  { num: 2, title: 'Warga Mendaftar', desc: 'Warga mendaftar melalui aplikasi dengan data NIK dan verifikasi.' },
-  { num: 3, title: 'Verifikasi Akun', desc: 'Admin memverifikasi dan mengaktifkan akun warga yang terdaftar.' },
-  { num: 4, title: 'Akses Layanan', desc: 'Warga dapat mengakses semua layanan digital desa.' },
+const FEATURES = [
+  {
+    eyebrow: 'Iuran warga',
+    title: 'Tahu siapa yang sudah bayar, tanpa membuka buku kas.',
+    points: [
+      'Atur jenis iuran per desa, RW, atau RT',
+      'Tagihan bulanan dibuat untuk semua KK sekaligus',
+      'Bayar via QRIS, status langsung jadi Lunas',
+      'Pengingat email otomatis untuk tagihan yang jatuh tempo',
+    ],
+    mockup: <IuranMockup />,
+  },
+  {
+    eyebrow: 'Surat menyurat',
+    title: 'Surat pengantar selesai tanpa warga keluar rumah.',
+    points: [
+      'Persetujuan bertingkat RT, RW, lalu Kepala Desa',
+      'Template surat bisa disesuaikan per desa',
+      'PDF dengan kode QR untuk verifikasi keaslian',
+      'Warga dikabari di setiap tahap',
+    ],
+    mockup: <SuratMockup />,
+  },
+  {
+    eyebrow: 'Keamanan lingkungan',
+    title: 'Ronda yang bisa dibuktikan, bukan sekadar dijadwalkan.',
+    points: [
+      'Titik checkpoint dengan kode QR yang bisa dicetak',
+      'Jadwal petugas dan riwayat scan per malam',
+      'Tombol darurat dengan lokasi GPS dan foto',
+      'Laporan darurat tampil di peta untuk pengurus',
+    ],
+    mockup: <RondaMockup />,
+  },
 ];
 
-const stats = [
-  { value: '500+', label: 'Desa Terdaftar' },
-  { value: '50.000+', label: 'Warga Aktif' },
-  { value: '100.000+', label: 'Surat Terbit' },
-  { value: '99.9%', label: 'Uptime' },
+const MORE = [
+  ['Data warga & KK', 'Profil warga, kartu keluarga, dan dokumen seperti KTP, akta, dan BPJS di satu tempat.'],
+  ['Pengumuman & kegiatan', 'Kabar desa dan jadwal kegiatan sampai ke warga tanpa bergantung pada grup chat.'],
+  ['Laporan warga', 'Keluhan jalan rusak atau lampu mati tercatat dan bisa ditindaklanjuti.'],
+  ['Buku tamu', 'Tamu yang datang ke lingkungan tercatat dengan rapi.'],
+  ['Halaman publik desa', 'Setiap desa punya halaman profil sendiri yang bisa dibagikan.'],
+  ['Audit log', 'Setiap perubahan data tercatat: siapa, kapan, dan apa yang diubah.'],
 ];
 
-const benefits = [
-  { icon: Zap, title: 'Modern & Cepat', desc: 'Dibangun dengan teknologi terbaru untuk performa optimal.' },
-  { icon: Lock, title: 'Aman & Terpercaya', desc: 'Enkripsi data dan akses berbasis peran (RBAC).' },
-  { icon: Globe, title: 'Akses Dimana Saja', desc: 'Responsive di semua perangkat — desktop, tablet, mobile.' },
-  { icon: Gift, title: 'Gratis untuk Desa', desc: 'Tanpa biaya berlangganan, langsung pakai.' },
+const ROLES = [
+  { role: 'Kepala Desa', desc: 'Melihat kondisi seluruh RW dari satu dasbor, dan menyetujui surat di tahap akhir.' },
+  { role: 'Sekretaris & Kaur', desc: 'Mengelola data warga, arsip surat, dan pembukuan tanpa rekap manual di spreadsheet.' },
+  { role: 'Ketua RW & RT', desc: 'Menagih iuran, menyetujui surat pengantar, dan memantau ronda di wilayahnya.' },
+  { role: 'Warga', desc: 'Mengajukan surat, membayar iuran, dan menekan tombol darurat dari HP.' },
 ];
 
-// ─── Component ───
+const STEPS = [
+  ['Daftarkan desa', 'Isi profil desa dan verifikasi email admin. Struktur RW dan RT dibuat setelahnya.'],
+  ['Undang perangkat', 'Tambahkan Kepala Desa, Kaur, Ketua RW/RT, dan petugas ronda sesuai perannya.'],
+  ['Aktifkan warga', 'Warga mendaftar dengan NIK. Pengurus RT memverifikasi, lalu akun aktif.'],
+];
+
 export default function LandingPage() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Navbar scroll effect
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  const scrollTo = useCallback((id: string) => {
+  const go = (id: string) => {
     setMenuOpen(false);
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
-
-  // Section refs for scroll reveal
-  const fiturReveal = useScrollReveal();
-  const comingSoonReveal = useScrollReveal();
-  const caraKerjaReveal = useScrollReveal();
-  const statsReveal = useScrollReveal();
-  const keunggulanReveal = useScrollReveal();
-  const ctaReveal = useScrollReveal();
+    scrollTo(id);
+  };
 
   return (
-    <div className="min-h-screen bg-white overflow-x-hidden">
-      {/* ══════════ NAVBAR ══════════ */}
-      <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          scrolled ? 'bg-white/95 backdrop-blur-md shadow-sm' : 'bg-transparent'
-        }`}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 lg:h-20">
-            {/* Logo */}
-            <Link to="/" className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-primary-600 flex items-center justify-center">
-                <span className="text-white font-bold text-lg">W</span>
-              </div>
-              <span className={`text-xl font-bold ${scrolled ? 'text-gray-900' : 'text-white'}`}>
-                WargaHub
-              </span>
-            </Link>
-
-            {/* Desktop nav links */}
-            <div className="hidden lg:flex items-center gap-8">
-              {['Fitur', 'Cara Kerja', 'Keunggulan', 'Kontak'].map((item) => (
-                <button
-                  key={item}
-                  onClick={() => scrollTo(item.toLowerCase().replace(' ', '-'))}
-                  className={`text-sm font-medium transition-colors hover:text-primary-500 ${
-                    scrolled ? 'text-gray-600' : 'text-white/80'
-                  }`}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-
-            {/* Desktop CTA */}
-            <div className="hidden lg:flex items-center gap-3">
-              {isAuthenticated ? (
-                <Link
-                  to="/dashboard"
-                  className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl transition-colors"
-                >
-                  Dashboard
+    <div className="min-h-screen overflow-x-hidden bg-white text-gray-900 antialiased">
+      {/* Nav */}
+      <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/90 backdrop-blur">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
+          <Link to="/" className="flex items-center gap-2 font-semibold tracking-tight">
+            <span className="flex h-6 w-6 items-center justify-center rounded bg-gray-900 text-xs font-bold text-white">W</span>
+            WargaHub
+          </Link>
+          <nav className="hidden items-center gap-7 md:flex" aria-label="Utama">
+            {NAV.map((n) => (
+              <button key={n.id} onClick={() => go(n.id)} className="text-sm text-gray-600 hover:text-gray-900">
+                {n.label}
+              </button>
+            ))}
+          </nav>
+          <div className="hidden items-center gap-2 md:flex">
+            {isAuthenticated ? (
+              <Link to="/dashboard" className="rounded-md bg-gray-900 px-3.5 py-1.5 text-sm font-medium text-white hover:bg-gray-800">
+                Buka dasbor
+              </Link>
+            ) : (
+              <>
+                <Link to="/login" className="rounded-md px-3 py-1.5 text-sm text-gray-700 hover:text-gray-900">Masuk</Link>
+                <Link to="/register-desa" className="rounded-md bg-gray-900 px-3.5 py-1.5 text-sm font-medium text-white hover:bg-gray-800">
+                  Daftarkan desa
                 </Link>
+              </>
+            )}
+          </div>
+          <button
+            className="-mr-2 p-2 text-gray-700 md:hidden"
+            onClick={() => setMenuOpen((o) => !o)}
+            aria-label={menuOpen ? 'Tutup menu' : 'Buka menu'}
+            aria-expanded={menuOpen}
+          >
+            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
+        {menuOpen && (
+          <div className="border-t border-gray-200 bg-white px-4 py-3 md:hidden">
+            {NAV.map((n) => (
+              <button key={n.id} onClick={() => go(n.id)} className="block w-full py-2 text-left text-sm text-gray-700">
+                {n.label}
+              </button>
+            ))}
+            <div className="mt-2 flex gap-2 border-t border-gray-100 pt-3">
+              {isAuthenticated ? (
+                <Link to="/dashboard" className="flex-1 rounded-md bg-gray-900 py-2 text-center text-sm font-medium text-white">Buka dasbor</Link>
               ) : (
                 <>
-                  <Link
-                    to="/login"
-                    className={`px-4 py-2 text-sm font-medium rounded-xl transition-colors ${
-                      scrolled
-                        ? 'text-gray-700 hover:text-primary-600'
-                        : 'text-white/90 hover:text-white'
-                    }`}
-                  >
-                    Masuk
-                  </Link>
-                  <Link
-                    to="/register"
-                    className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl transition-colors"
-                  >
-                    Daftar Gratis
-                  </Link>
+                  <Link to="/login" className="flex-1 rounded-md border border-gray-300 py-2 text-center text-sm text-gray-700">Masuk</Link>
+                  <Link to="/register-desa" className="flex-1 rounded-md bg-gray-900 py-2 text-center text-sm font-medium text-white">Daftarkan desa</Link>
                 </>
               )}
             </div>
-
-            {/* Mobile hamburger */}
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className={`lg:hidden p-2 rounded-lg ${scrolled ? 'text-gray-700' : 'text-white'}`}
-            >
-              {menuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile menu */}
-        {menuOpen && (
-          <div className="lg:hidden bg-white border-t shadow-lg animate-fade-in">
-            <div className="px-4 py-4 space-y-1">
-              {['Fitur', 'Cara Kerja', 'Keunggulan', 'Kontak'].map((item) => (
-                <button
-                  key={item}
-                  onClick={() => scrollTo(item.toLowerCase().replace(' ', '-'))}
-                  className="block w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-medium"
-                >
-                  {item}
-                </button>
-              ))}
-              <div className="pt-3 border-t mt-3 flex flex-col gap-2">
-                {isAuthenticated ? (
-                  <Link
-                    to="/dashboard"
-                    className="px-4 py-3 bg-primary-600 text-white text-center text-sm font-semibold rounded-xl"
-                  >
-                    Dashboard
-                  </Link>
-                ) : (
-                  <>
-                    <Link
-                      to="/login"
-                      className="px-4 py-3 text-gray-700 text-center text-sm font-medium rounded-xl border border-gray-200"
-                    >
-                      Masuk
-                    </Link>
-                    <Link
-                      to="/register"
-                      className="px-4 py-3 bg-primary-600 text-white text-center text-sm font-semibold rounded-xl"
-                    >
-                      Daftar Gratis
-                    </Link>
-                  </>
-                )}
-              </div>
-            </div>
           </div>
         )}
-      </nav>
+      </header>
 
-      {/* ══════════ HERO ══════════ */}
-      <section className="relative min-h-screen flex items-center bg-gradient-to-br from-primary-700 via-primary-600 to-primary-500 overflow-hidden">
-        {/* Decorative blobs */}
-        <div className="absolute top-20 left-10 w-72 h-72 bg-primary-400/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-10 right-10 w-96 h-96 bg-primary-300/20 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-white/5 rounded-full blur-2xl" />
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16 lg:pt-0 lg:pb-0 w-full">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Left content */}
-            <div className="text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-white/90 text-sm font-medium mb-6 animate-fade-in">
-                <Zap size={16} />
-                Platform Digital Desa #1 di Indonesia
-              </div>
-
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight mb-6 animate-fade-in-up">
-                Digitalisasi{' '}
-                <span className="text-primary-200">Administrasi</span>{' '}
-                Desa Anda
-              </h1>
-
-              <p className="text-lg sm:text-xl text-white/80 mb-8 max-w-xl mx-auto lg:mx-0 animate-fade-in-up delay-200">
-                Platform all-in-one untuk mengelola data warga, surat menyurat,
-                keuangan, keamanan, dan layanan desa lainnya secara digital.
-              </p>
-
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-4 animate-fade-in-up delay-300">
-                <Link
-                  to="/register-desa"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-primary-700 font-bold rounded-xl hover:bg-gray-100 transition-colors shadow-lg shadow-primary-900/20"
-                >
-                  Daftarkan Desa Anda <ArrowRight size={18} />
-                </Link>
-                <button
-                  onClick={() => scrollTo('fitur')}
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 border-2 border-white/30 text-white font-semibold rounded-xl hover:bg-white/10 transition-colors"
-                >
-                  Lihat Fitur
-                </button>
-              </div>
-
-              <div className="text-center lg:text-left mb-10 animate-fade-in-up delay-300">
-                <Link to="/register" className="text-white/70 hover:text-white text-sm font-medium transition-colors">
-                  Atau daftar sebagai warga &rarr;
-                </Link>
-              </div>
-
-              {/* Trust indicators */}
-              <div className="flex flex-wrap gap-6 justify-center lg:justify-start text-white/70 text-sm animate-fade-in-up delay-400">
-                <span className="flex items-center gap-1.5">
-                  <Gift size={16} /> Gratis
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Zap size={16} /> Setup 5 menit
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Lock size={16} /> Aman dan Terpercaya
-                </span>
-              </div>
-            </div>
-
-            {/* Right — Dashboard mockup (CSS only) */}
-            <div className="hidden lg:block animate-float">
-              <div className="relative">
-                {/* Main card */}
-                <div className="bg-white/95 backdrop-blur rounded-2xl shadow-2xl p-6 border border-white/50">
-                  {/* Fake topbar */}
-                  <div className="flex items-center gap-3 mb-5">
-                    <div className="w-3 h-3 rounded-full bg-red-400" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                    <div className="w-3 h-3 rounded-full bg-green-400" />
-                    <div className="flex-1 h-6 bg-gray-100 rounded-lg ml-3" />
-                  </div>
-
-                  {/* Stat cards */}
-                  <div className="grid grid-cols-3 gap-3 mb-5">
-                    <div className="bg-primary-50 rounded-xl p-3 text-center">
-                      <div className="text-xl font-bold text-primary-700">2.458</div>
-                      <div className="text-xs text-primary-600/70">Warga</div>
-                    </div>
-                    <div className="bg-emerald-50 rounded-xl p-3 text-center">
-                      <div className="text-xl font-bold text-emerald-700">184</div>
-                      <div className="text-xs text-emerald-600/70">Surat</div>
-                    </div>
-                    <div className="bg-amber-50 rounded-xl p-3 text-center">
-                      <div className="text-xl font-bold text-amber-700">Rp 12jt</div>
-                      <div className="text-xs text-amber-600/70">Iuran</div>
-                    </div>
-                  </div>
-
-                  {/* Fake chart bars */}
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <div className="flex items-end gap-2 h-24">
-                      {[40, 65, 50, 80, 60, 90, 75].map((h, i) => (
-                        <div key={i} className="flex-1 bg-primary-400 rounded-t-lg transition-all" style={{ height: `${h}%` }} />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Floating notification card */}
-                <div className="absolute -bottom-4 -left-6 bg-white rounded-xl shadow-xl p-3 flex items-center gap-3 animate-fade-in delay-500 border border-gray-100">
-                  <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-                    <FileText size={20} className="text-emerald-600" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-gray-800">Surat Selesai</div>
-                    <div className="text-xs text-gray-500">SK Domisili - Budi S.</div>
-                  </div>
-                </div>
-
-                {/* Floating user card */}
-                <div className="absolute -top-3 -right-4 bg-white rounded-xl shadow-xl p-3 flex items-center gap-3 animate-fade-in delay-700 border border-gray-100">
-                  <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
-                    <Users size={20} className="text-primary-600" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-gray-800">+12 Warga Baru</div>
-                    <div className="text-xs text-gray-500">Minggu ini</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════ FITUR ══════════ */}
-      <section id="fitur" className="py-20 lg:py-28 bg-gray-50">
-        <div
-          ref={fiturReveal.ref}
-          className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 transition-all duration-700 ${
-            fiturReveal.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-          }`}
-        >
-          <div className="text-center mb-14">
-            <span className="inline-block px-4 py-1.5 bg-primary-100 text-primary-700 rounded-full text-sm font-semibold mb-4">
-              Fitur Lengkap
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
-              Semua yang Desa Anda Butuhkan
-            </h2>
-            <p className="text-gray-500 max-w-2xl mx-auto">
-              Dari data warga hingga keamanan lingkungan, WargaHub menyediakan semua fitur yang diperlukan untuk digitalisasi desa.
+      <main>
+        {/* Hero */}
+        <section className="mx-auto max-w-6xl px-4 pb-16 pt-16 sm:px-6 sm:pt-24 lg:pb-24">
+          <div className="max-w-3xl">
+            <p className="text-sm font-medium text-primary-700">Administrasi desa, RW, dan RT</p>
+            <h1 className="mt-4 text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
+              Urusan warga tidak perlu lagi dicatat di buku tulis.
+            </h1>
+            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-gray-600">
+              WargaHub menyatukan data warga, surat pengantar, iuran, dan ronda dalam satu sistem
+              yang dipakai bersama oleh desa, RW, RT, dan warganya.
             </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
-            {features.map((f, i) => (
-              <div
-                key={f.label}
-                className={`bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md hover:-translate-y-1 transition-all duration-300 ${
-                  fiturReveal.isVisible ? 'animate-fade-in-up' : 'opacity-0'
-                } delay-${(i % 5) * 100 + 100}`}
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link
+                to={isAuthenticated ? '/dashboard' : '/register-desa'}
+                className="inline-flex items-center justify-center gap-2 rounded-md bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
               >
-                <div className={`w-12 h-12 ${f.color} rounded-xl flex items-center justify-center mb-4`}>
-                  <f.icon size={22} />
-                </div>
-                <h3 className="font-bold text-gray-900 mb-1">{f.label}</h3>
-                <p className="text-sm text-gray-500">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════ SEGERA HADIR ══════════ */}
-      <section className="py-20 lg:py-28 bg-white">
-        <div
-          ref={comingSoonReveal.ref}
-          className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 transition-all duration-700 ${
-            comingSoonReveal.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-          }`}
-        >
-          <div className="text-center mb-14">
-            <span className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-amber-100 text-amber-700 rounded-full text-sm font-semibold mb-4">
-              <Rocket size={14} />
-              Segera Hadir
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
-              Fitur yang Sedang Kami Kembangkan
-            </h2>
-            <p className="text-gray-500 max-w-2xl mx-auto">
-              Kami terus berinovasi untuk menghadirkan fitur-fitur canggih demi mewujudkan desa yang lebih modern dan aman.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {comingSoonFeatures.map((f, i) => (
-              <div
-                key={f.label}
-                className={`relative bg-gradient-to-br from-gray-50 to-white rounded-xl border-2 border-dashed border-gray-200 p-5 hover:border-primary-300 hover:shadow-md transition-all duration-300 group ${
-                  comingSoonReveal.isVisible ? 'animate-fade-in-up' : 'opacity-0'
-                } delay-${(i % 4) * 100 + 100}`}
+                {isAuthenticated ? 'Buka dasbor' : 'Daftarkan desa Anda'}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <button
+                onClick={() => scrollTo('fitur')}
+                className="inline-flex items-center justify-center rounded-md border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:border-gray-400 hover:text-gray-900"
               >
-                <span className="absolute top-3 right-3 px-2.5 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-full uppercase tracking-wide">
-                  Coming Soon
-                </span>
-                <div className={`w-12 h-12 ${f.color} rounded-xl flex items-center justify-center mb-4 opacity-80 group-hover:opacity-100 transition-opacity`}>
-                  <f.icon size={22} />
-                </div>
-                <h3 className="font-bold text-gray-900 mb-1">{f.label}</h3>
-                <p className="text-sm text-gray-500">{f.desc}</p>
-              </div>
-            ))}
+                Lihat fiturnya
+              </button>
+            </div>
           </div>
-        </div>
-      </section>
+          <div className="mt-14 lg:mt-20">
+            <IuranMockup />
+          </div>
+        </section>
 
-      {/* ══════════ CARA KERJA ══════════ */}
-      <section id="cara-kerja" className="py-20 lg:py-28 bg-white">
-        <div
-          ref={caraKerjaReveal.ref}
-          className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 transition-all duration-700 ${
-            caraKerjaReveal.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-          }`}
-        >
-          <div className="text-center mb-14">
-            <span className="inline-block px-4 py-1.5 bg-primary-100 text-primary-700 rounded-full text-sm font-semibold mb-4">
-              Cara Kerja
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
-              Mulai dalam 4 Langkah Mudah
+        {/* Problem → solution */}
+        <section className="border-y border-gray-200 bg-gray-50">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-24">
+            <h2 className="max-w-2xl text-2xl font-semibold tracking-tight sm:text-3xl">
+              Pekerjaan yang selama ini menyita waktu pengurus.
             </h2>
-            <p className="text-gray-500 max-w-2xl mx-auto">
-              Proses sederhana untuk memulai digitalisasi desa Anda.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {steps.map((s, i) => (
-              <div key={s.num} className="relative text-center">
-                {/* Connector line (hidden on first item & mobile) */}
-                {i > 0 && (
-                  <div className="hidden lg:block absolute top-8 -left-4 w-8 border-t-2 border-dashed border-primary-300" />
-                )}
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 text-primary-700 rounded-full text-2xl font-extrabold mb-5">
-                  {s.num}
+            <div className="mt-10 grid gap-px overflow-hidden rounded-lg border border-gray-200 bg-gray-200 md:grid-cols-2">
+              {PROBLEMS.map((p) => (
+                <div key={p.before} className="bg-white p-6 sm:p-7">
+                  <p className="text-sm leading-relaxed text-gray-500">{p.before}</p>
+                  <p className="mt-4 flex gap-2.5 text-[15px] leading-relaxed text-gray-900">
+                    <Check className="mt-1 h-4 w-4 shrink-0 text-primary-600" />
+                    {p.after}
+                  </p>
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">{s.title}</h3>
-                <p className="text-sm text-gray-500">{s.desc}</p>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Feature deep-dives */}
+        <section id="fitur" className="mx-auto max-w-6xl scroll-mt-16 px-4 py-16 sm:px-6 lg:py-24">
+          <div className="space-y-20 lg:space-y-28">
+            {FEATURES.map((f, i) => (
+              <div key={f.eyebrow} className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+                <div className={i % 2 === 1 ? 'lg:order-2' : ''}>
+                  <p className="text-sm font-medium text-primary-700">{f.eyebrow}</p>
+                  <h3 className="mt-3 text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">{f.title}</h3>
+                  <ul className="mt-6 space-y-3">
+                    {f.points.map((pt) => (
+                      <li key={pt} className="flex gap-3 text-[15px] text-gray-700">
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+                        {pt}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className={`min-w-0 ${i % 2 === 1 ? 'lg:order-1' : ''}`}>{f.mockup}</div>
               </div>
             ))}
           </div>
-        </div>
-      </section>
 
-      {/* ══════════ STATISTIK ══════════ */}
-      <section className="relative py-20 lg:py-24 bg-primary-900 overflow-hidden">
-        {/* Decorative blobs */}
-        <div className="absolute top-0 left-1/4 w-80 h-80 bg-primary-700/50 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-primary-800/40 rounded-full blur-3xl" />
+          <div className="mt-24 border-t border-gray-200 pt-16">
+            <h3 className="text-xl font-semibold tracking-tight">Juga termasuk</h3>
+            <dl className="mt-8 grid gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+              {MORE.map(([t, d]) => (
+                <div key={t}>
+                  <dt className="text-sm font-semibold text-gray-900">{t}</dt>
+                  <dd className="mt-1.5 text-sm leading-relaxed text-gray-600">{d}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </section>
 
-        <div
-          ref={statsReveal.ref}
-          className={`relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 transition-all duration-700 ${
-            statsReveal.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-          }`}
-        >
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-            {stats.map((s) => (
-              <div key={s.label} className="text-center">
-                <div className="text-4xl sm:text-5xl font-extrabold text-white mb-2">{s.value}</div>
-                <div className="text-primary-200 text-sm sm:text-base font-medium">{s.label}</div>
+        {/* Roles */}
+        <section id="peran" className="scroll-mt-16 border-t border-gray-200 bg-gray-50">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-24">
+            <div className="grid gap-10 lg:grid-cols-3">
+              <div>
+                <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Satu sistem, dengan akses sesuai jabatan.</h2>
+                <p className="mt-4 text-[15px] leading-relaxed text-gray-600">
+                  Tersedia 16 peran perangkat desa, dari Kepala Desa sampai petugas ronda. Setiap orang
+                  hanya melihat data wilayah dan menu yang menjadi tugasnya. Peran khusus juga bisa dibuat sendiri.
+                </p>
               </div>
+              <div className="grid gap-px overflow-hidden rounded-lg border border-gray-200 bg-gray-200 sm:grid-cols-2 lg:col-span-2">
+                {ROLES.map((r) => (
+                  <div key={r.role} className="bg-white p-6">
+                    <p className="text-sm font-semibold">{r.role}</p>
+                    <p className="mt-2 text-sm leading-relaxed text-gray-600">{r.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Steps */}
+        <section id="mulai" className="mx-auto max-w-6xl scroll-mt-16 px-4 py-16 sm:px-6 lg:py-24">
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Mulai dalam tiga langkah.</h2>
+          <ol className="mt-10 grid gap-8 md:grid-cols-3">
+            {STEPS.map(([t, d], i) => (
+              <li key={t} className="border-t border-gray-900 pt-5">
+                <span className="text-sm tabular-nums text-gray-500">0{i + 1}</span>
+                <p className="mt-2 font-semibold">{t}</p>
+                <p className="mt-2 text-sm leading-relaxed text-gray-600">{d}</p>
+              </li>
             ))}
-          </div>
-        </div>
-      </section>
+          </ol>
+        </section>
 
-      {/* ══════════ KEUNGGULAN ══════════ */}
-      <section id="keunggulan" className="py-20 lg:py-28 bg-gray-50">
-        <div
-          ref={keunggulanReveal.ref}
-          className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 transition-all duration-700 ${
-            keunggulanReveal.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-          }`}
-        >
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Left — benefits list */}
+        {/* Final CTA */}
+        <section className="border-t border-gray-200">
+          <div className="mx-auto flex max-w-6xl flex-col items-start gap-6 px-4 py-16 sm:px-6 md:flex-row md:items-center md:justify-between lg:py-20">
             <div>
-              <span className="inline-block px-4 py-1.5 bg-primary-100 text-primary-700 rounded-full text-sm font-semibold mb-4">
-                Kenapa WargaHub?
-              </span>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-8">
-                Keunggulan Platform Kami
-              </h2>
-
-              <div className="space-y-6">
-                {benefits.map((b) => (
-                  <div key={b.title} className="flex gap-4">
-                    <div className="flex-shrink-0 w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center">
-                      <b.icon size={22} className="text-primary-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-gray-900 mb-1">{b.title}</h3>
-                      <p className="text-sm text-gray-500">{b.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Siap merapikan administrasi desa Anda?</h2>
+              <p className="mt-2 text-[15px] text-gray-600">Daftarkan desa, lalu undang perangkat dan warga secara bertahap.</p>
             </div>
-
-            {/* Right — visual cards (hidden on mobile) */}
-            <div className="hidden lg:block space-y-4">
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-                    <Shield size={20} className="text-emerald-600" />
-                  </div>
-                  <div>
-                    <div className="font-bold text-gray-900">Keamanan Terjamin</div>
-                    <div className="text-xs text-gray-500">Enkripsi end-to-end & RBAC</div>
-                  </div>
-                  <div className="ml-auto px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full">
-                    Aktif
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  {['JWT Auth', 'Role-Based', 'Audit Log'].map((tag) => (
-                    <div key={tag} className="bg-gray-50 rounded-lg py-2 text-center text-xs font-medium text-gray-600">
-                      {tag}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
-                  <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center mb-3">
-                    <Globe size={20} className="text-primary-600" />
-                  </div>
-                  <div className="font-bold text-gray-900 mb-1">Multi-Platform</div>
-                  <div className="text-xs text-gray-500">Desktop, tablet, mobile — semua lancar.</div>
-                </div>
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
-                  <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center mb-3">
-                    <Zap size={20} className="text-amber-600" />
-                  </div>
-                  <div className="font-bold text-gray-900 mb-1">Super Cepat</div>
-                  <div className="text-xs text-gray-500">Response time &lt;200ms di semua API.</div>
-                </div>
-              </div>
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+              <Link to="/register-desa" className="inline-flex items-center justify-center gap-2 rounded-md bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800">
+                Daftarkan desa
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link to="/register" className="inline-flex items-center justify-center rounded-md border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:border-gray-400">
+                Saya warga
+              </Link>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </main>
 
-      {/* ══════════ CTA ══════════ */}
-      <section className="py-20 lg:py-24">
-        <div
-          ref={ctaReveal.ref}
-          className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 transition-all duration-700 ${
-            ctaReveal.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-          }`}
-        >
-          <div className="relative bg-gradient-to-br from-primary-600 to-primary-700 rounded-3xl px-8 py-16 sm:px-16 text-center overflow-hidden">
-            {/* Blobs */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/30 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-primary-400/20 rounded-full blur-3xl" />
-
-            <div className="relative">
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">
-                Siap Memulai Transformasi Digital Desa Anda?
-              </h2>
-              <p className="text-white/80 mb-8 max-w-xl mx-auto">
-                Bergabung dengan ratusan desa yang sudah menggunakan WargaHub untuk layanan administrasi modern.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link
-                  to="/register-desa"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-primary-700 font-bold rounded-xl hover:bg-gray-100 transition-colors shadow-lg"
-                >
-                  Daftarkan Desa Anda <ChevronRight size={18} />
-                </Link>
-                <Link
-                  to="/login"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 border-2 border-white/30 text-white font-semibold rounded-xl hover:bg-white/10 transition-colors"
-                >
-                  Masuk ke Akun
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════ FOOTER ══════════ */}
-      <footer id="kontak" className="bg-gray-900 text-gray-400 pt-16 pb-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
-            {/* About */}
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">W</span>
-                </div>
-                <span className="text-white font-bold text-lg">WargaHub</span>
-              </div>
-              <p className="text-sm leading-relaxed">
-                Platform digital untuk pengelolaan administrasi desa yang modern, aman, dan mudah digunakan.
-              </p>
-            </div>
-
-            {/* Tautan Cepat */}
-            <div>
-              <h4 className="text-white font-semibold mb-4">Tautan Cepat</h4>
-              <ul className="space-y-2 text-sm">
-                {['Fitur', 'Cara Kerja', 'Keunggulan', 'Kontak'].map((item) => (
-                  <li key={item}>
-                    <button
-                      onClick={() => scrollTo(item.toLowerCase().replace(' ', '-'))}
-                      className="hover:text-white transition-colors"
-                    >
-                      {item}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Layanan */}
-            <div>
-              <h4 className="text-white font-semibold mb-4">Layanan</h4>
-              <ul className="space-y-2 text-sm">
-                {['Data Warga', 'Surat Menyurat', 'Iuran & Keuangan', 'Keamanan Ronda', 'Pengumuman', 'Dashboard Analitik'].map((item) => (
-                  <li key={item}>
-                    <span className="hover:text-white transition-colors cursor-default">{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Kontak */}
-            <div>
-              <h4 className="text-white font-semibold mb-4">Kontak</h4>
-              <ul className="space-y-3 text-sm">
-                <li className="flex items-center gap-2">
-                  <Mail size={16} className="text-primary-400" />
-                  logic.frame.indonesia@gmail.com
-                </li>
-                <li className="flex items-center gap-2">
-                  <Phone size={16} className="text-primary-400" />
-                  +62 858 4172 2279
-                </li>
-                <li className="flex items-start gap-2">
-                  <MapPin size={16} className="text-primary-400 mt-0.5" />
-                  <span>Bandar Lampung, Indonesia</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Bottom bar */}
-          <div className="border-t border-gray-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm">
-            <p>&copy; {new Date().getFullYear()} WargaHub. All rights reserved.</p>
-            <p>Dibuat dengan ❤ untuk Indonesia</p>
+      <footer className="border-t border-gray-200">
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-sm text-gray-500 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <p>© {new Date().getFullYear()} WargaHub</p>
+          <div className="flex gap-6">
+            <Link to="/login" className="hover:text-gray-900">Masuk</Link>
+            <Link to="/register" className="hover:text-gray-900">Daftar sebagai warga</Link>
+            <Link to="/register-desa" className="hover:text-gray-900">Daftarkan desa</Link>
           </div>
         </div>
       </footer>

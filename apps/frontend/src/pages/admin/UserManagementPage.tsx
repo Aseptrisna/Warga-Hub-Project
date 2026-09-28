@@ -1,13 +1,23 @@
 import { useState, useEffect } from 'react';
 import { usersService, UserStatistics } from '../../services/settings.service';
 import { publicRegionsService } from '../../services/regions.service';
+import { customRolesService } from '../../services/custom-roles.service';
 import { Role, RoleLabels } from '@shared/role.enum';
 import { useAuthStore } from '../../stores/auth.store';
 import {
   Users, UserPlus, Search, Edit, Trash2, ToggleLeft, ToggleRight,
-  X, ChevronLeft, ChevronRight, Shield, UserCheck, UserX, AlertCircle,
+  ChevronLeft, ChevronRight, Shield, UserCheck, UserX, AlertCircle,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { Card, CardBody } from '../../components/ui/Card';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { StatTile } from '../../components/ui/StatTile';
+import { Table, Thead, Tbody, Th, Td } from '../../components/ui/Table';
+import { Badge } from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
+import { Input, Select } from '../../components/ui/Input';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 // Roles that AdminDesa can manage
 const ADMIN_DESA_ROLES: Role[] = [
@@ -48,6 +58,24 @@ export default function UserManagementPage() {
   const currentUser = useAuthStore((s) => s.user);
   const isAdminDesa = currentUser?.role === Role.ADMIN_DESA;
   const availableRoles = isAdminDesa ? ADMIN_DESA_ROLES : Object.values(Role) as Role[];
+
+  // Custom roles (see modules/custom-roles) - only SuperAdmin/AdminPlatform
+  // can assign them; AdminDesa stays restricted to ADMIN_DESA_ROLES above.
+  const [customRoleOptions, setCustomRoleOptions] = useState<{ code: string; label: string }[]>([]);
+  useEffect(() => {
+    if (isAdminDesa) return;
+    customRolesService
+      .getAll()
+      .then((roles: any[]) => setCustomRoleOptions(roles.filter((r) => r.isActive).map((r) => ({ code: r.code, label: r.label }))))
+      .catch(() => setCustomRoleOptions([]));
+  }, [isAdminDesa]);
+
+  const roleOptions = [
+    ...availableRoles.map((r) => ({ value: r as string, label: RoleLabels[r] })),
+    ...customRoleOptions.map((c) => ({ value: c.code, label: c.label })),
+  ];
+  const roleLabelMap = new Map(roleOptions.map((o) => [o.value, o.label]));
+  const labelForRole = (role: string) => roleLabelMap.get(role) || role;
 
   const [users, setUsers] = useState<UserItem[]>([]);
   const [stats, setStats] = useState<UserStatistics | null>(null);
@@ -305,226 +333,162 @@ export default function UserManagementPage() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Manajemen User</h1>
-          <p className="text-gray-600 mt-1">Kelola seluruh akun pengguna platform</p>
-        </div>
-        <button
-          onClick={() => { setShowCreateModal(true); setCreateError(''); }}
-          className="inline-flex items-center px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
-        >
-          <UserPlus className="w-5 h-5 mr-2" />
-          Tambah User
-        </button>
-      </div>
+      <PageHeader
+        title="Manajemen User"
+        subtitle="Kelola seluruh akun pengguna platform"
+        actions={
+          <Button onClick={() => { setShowCreateModal(true); setCreateError(''); }}>
+            <UserPlus className="w-4 h-4" /> Tambah User
+          </Button>
+        }
+      />
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl p-5 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-blue-100 text-sm">Total Users</p>
-              <p className="text-3xl font-bold mt-1">{stats?.totalUsers ?? '-'}</p>
-            </div>
-            <Users className="w-12 h-12 text-blue-200 opacity-50" />
-          </div>
-        </div>
-        <div className="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-xl p-5 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-green-100 text-sm">Aktif</p>
-              <p className="text-3xl font-bold mt-1">{stats?.activeUsers ?? '-'}</p>
-            </div>
-            <UserCheck className="w-12 h-12 text-green-200 opacity-50" />
-          </div>
-        </div>
-        <div className="bg-gradient-to-br from-red-500 to-red-600 text-white rounded-xl p-5 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-red-100 text-sm">Nonaktif</p>
-              <p className="text-3xl font-bold mt-1">{stats?.inactiveUsers ?? '-'}</p>
-            </div>
-            <UserX className="w-12 h-12 text-red-200 opacity-50" />
-          </div>
-        </div>
-        <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-xl p-5 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-purple-100 text-sm">Role Terdaftar</p>
-              <p className="text-3xl font-bold mt-1">{stats?.byRole?.length ?? '-'}</p>
-            </div>
-            <Shield className="w-12 h-12 text-purple-200 opacity-50" />
-          </div>
-        </div>
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <StatTile label="Total Users" value={stats?.totalUsers ?? '-'} icon={Users} />
+        <StatTile label="Aktif" value={stats?.activeUsers ?? '-'} icon={UserCheck} tone="success" />
+        <StatTile label="Nonaktif" value={stats?.inactiveUsers ?? '-'} icon={UserX} tone="danger" />
+        <StatTile label="Role Terdaftar" value={stats?.byRole?.length ?? '-'} icon={Shield} tone="info" />
       </div>
 
       {/* Role breakdown */}
       {stats?.byRole && stats.byRole.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-          <p className="text-sm font-medium text-gray-700 mb-3">Distribusi Role</p>
-          <div className="flex flex-wrap gap-2">
-            {stats.byRole.map((r) => (
-              <span
-                key={r.role}
-                className="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-800 rounded-full text-xs font-medium"
-              >
-                {RoleLabels[r.role as Role] || r.role}
-                <span className="ml-1.5 bg-gray-300 text-gray-700 px-1.5 py-0.5 rounded-full text-xs">{r.count}</span>
-              </span>
-            ))}
-          </div>
-        </div>
+        <Card className="mb-6">
+          <CardBody>
+            <p className="text-sm font-medium text-gray-700 mb-3">Distribusi Role</p>
+            <div className="flex flex-wrap gap-2">
+              {stats.byRole.map((r) => (
+                <Badge key={r.role} tone="neutral">
+                  {labelForRole(r.role)}
+                  <span className="ml-1.5 bg-gray-300 text-gray-700 px-1.5 py-0.5 rounded-full text-[10px]">{r.count}</span>
+                </Badge>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
       )}
 
       {/* Filters */}
       <div className="flex gap-3 mb-6 flex-wrap">
         <div className="flex-1 min-w-[250px] relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input
             type="text"
             placeholder="Cari nama atau email..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            className="pl-9"
           />
         </div>
-        <select
-          value={roleFilter}
-          onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-        >
+        <Select value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }} className="w-auto">
           <option value="">Semua Role</option>
-          {availableRoles.map((r) => (
-            <option key={r} value={r}>{RoleLabels[r]}</option>
+          {roleOptions.map((r) => (
+            <option key={r.value} value={r.value}>{r.label}</option>
           ))}
-        </select>
-        <select
-          value={desaFilter}
-          onChange={(e) => { setDesaFilter(e.target.value); setPage(1); }}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-        >
+        </Select>
+        <Select value={desaFilter} onChange={(e) => { setDesaFilter(e.target.value); setPage(1); }} className="w-auto">
           <option value="">Semua Desa</option>
           {desaOptions.map((d) => (
             <option key={d} value={d}>{d}</option>
           ))}
-        </select>
-        <select
-          value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-        >
+        </Select>
+        <Select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="w-auto">
           <option value="">Semua Status</option>
           <option value="true">Aktif</option>
           <option value="false">Nonaktif</option>
-        </select>
+        </Select>
       </div>
 
       {/* Users Table */}
       {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="text-gray-500 mt-4">Memuat data...</p>
-        </div>
+        <div className="text-center py-12 text-sm text-gray-500">Memuat data...</div>
       ) : users.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-xl shadow-sm border border-gray-200">
-          <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Tidak ada user ditemukan</h3>
-          <p className="text-gray-500">Coba ubah filter pencarian atau tambah user baru</p>
-        </div>
+        <Card>
+          <EmptyState icon={Users} title="Tidak ada user ditemukan" description="Coba ubah filter pencarian atau tambah user baru" />
+        </Card>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nama</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Desa / RW / RT</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Login</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aksi</th>
+        <Card className="overflow-hidden">
+          <Table>
+            <Thead>
+              <tr>
+                <Th>#</Th>
+                <Th>Nama</Th>
+                <Th>Email</Th>
+                <Th>Role</Th>
+                <Th>Desa / RW / RT</Th>
+                <Th align="center">Status</Th>
+                <Th>Last Login</Th>
+                <Th align="right">Aksi</Th>
+              </tr>
+            </Thead>
+            <Tbody>
+              {users.map((user, idx) => (
+                <tr key={user.id} className="hover:bg-gray-50">
+                  <Td className="text-gray-500">{(page - 1) * limit + idx + 1}</Td>
+                  <Td>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white text-sm font-semibold">
+                        {user.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                        {user.phone && <p className="text-xs text-gray-500">{user.phone}</p>}
+                      </div>
+                    </div>
+                  </Td>
+                  <Td className="text-gray-700">{user.email}</Td>
+                  <Td>
+                    <Badge tone="info">{labelForRole(user.role)}</Badge>
+                  </Td>
+                  <Td className="text-gray-700">
+                    {user.desa || '-'}
+                    {user.rw && ` / RW ${user.rw}`}
+                    {user.rt && ` / RT ${user.rt}`}
+                  </Td>
+                  <Td align="center">
+                    <Badge tone={user.isActive ? 'success' : 'danger'}>{user.isActive ? 'Aktif' : 'Nonaktif'}</Badge>
+                  </Td>
+                  <Td className="text-gray-500">
+                    {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                  </Td>
+                  <Td align="right">
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => openEditModal(user)}
+                        className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-md transition-colors"
+                        title="Edit"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleToggleActive(user.id)}
+                        className={cn(
+                          'p-1.5 rounded-md transition-colors',
+                          user.isActive ? 'text-danger-text hover:bg-danger-bg' : 'text-success-text hover:bg-success-bg',
+                        )}
+                        title={user.isActive ? 'Nonaktifkan' : 'Aktifkan'}
+                      >
+                        {user.isActive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+                      </button>
+                      <button
+                        onClick={() => setDeleteId(user.id)}
+                        className="p-1.5 text-danger-text hover:bg-danger-bg rounded-md transition-colors"
+                        title="Hapus"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </Td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {users.map((user, idx) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-500">{(page - 1) * limit + idx + 1}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white text-sm font-semibold">
-                          {user.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                          {user.phone && <p className="text-xs text-gray-500">{user.phone}</p>}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{user.email}</td>
-                    <td className="px-4 py-3">
-                      <span className="px-2.5 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-                        {RoleLabels[user.role] || user.role}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">
-                      {user.desa || '-'}
-                      {user.rw && ` / RW ${user.rw}`}
-                      {user.rt && ` / RT ${user.rt}`}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={cn(
-                        'px-2.5 py-1 rounded-full text-xs font-medium',
-                        user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800',
-                      )}>
-                        {user.isActive ? 'Aktif' : 'Nonaktif'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
-                      {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => openEditModal(user)}
-                          className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                          title="Edit"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleToggleActive(user.id)}
-                          className={cn(
-                            'p-1.5 rounded-lg transition-colors',
-                            user.isActive ? 'text-red-500 hover:bg-red-50' : 'text-green-600 hover:bg-green-50',
-                          )}
-                          title={user.isActive ? 'Nonaktifkan' : 'Aktifkan'}
-                        >
-                          {user.isActive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
-                        </button>
-                        <button
-                          onClick={() => setDeleteId(user.id)}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Hapus"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+              ))}
+            </Tbody>
+          </Table>
+        </Card>
       )}
 
       {/* Pagination */}
       {!loading && users.length > 0 && (
-        <div className="mt-6 flex items-center justify-between bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-3">
+        <div className="mt-4 flex items-center justify-between bg-white rounded-lg border border-gray-200 px-4 py-3">
           <p className="text-sm text-gray-600">
             Menampilkan {(page - 1) * limit + 1}-{Math.min(page * limit, meta.total || 0)} dari {meta.total || 0} user
           </p>
@@ -566,312 +530,256 @@ export default function UserManagementPage() {
       )}
 
       {/* Create User Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-xl shadow-lg p-6 max-w-lg mx-4 w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Tambah User Baru</h3>
-              <button onClick={() => setShowCreateModal(false)} className="p-1 hover:bg-gray-100 rounded">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap *</label>
-                <input
-                  type="text"
-                  required
-                  value={createForm.name}
-                  onChange={(e) => setCreateForm((p) => ({ ...p, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Masukkan nama lengkap"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                <input
-                  type="email"
-                  required
-                  value={createForm.email}
-                  onChange={(e) => setCreateForm((p) => ({ ...p, email: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="user@example.com"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={createForm.password}
-                  onChange={(e) => setCreateForm((p) => ({ ...p, password: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Minimal 6 karakter"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
-                <select
-                  required
-                  value={createForm.role}
-                  onChange={(e) => setCreateForm((p) => ({ ...p, role: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                >
-                  {availableRoles.map((r) => (
-                    <option key={r} value={r}>{RoleLabels[r]}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">No. Telepon</label>
-                <input
-                  type="text"
-                  value={createForm.phone}
-                  onChange={(e) => setCreateForm((p) => ({ ...p, phone: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="081234567890"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Desa *</label>
-                <select
-                  required
-                  value={desaList.find((d) => d.name === createForm.desa)?.id || ''}
-                  onChange={(e) => handleCreateDesaChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                >
-                  <option value="">Pilih Desa</option>
-                  {desaList.map((d) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
-              </div>
-              {rwList.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">RW</label>
-                  <select
-                    value={rwList.find((r) => r.name === createForm.rw)?.id || ''}
-                    onChange={(e) => handleCreateRwChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    <option value="">Pilih RW (opsional)</option>
-                    {rwList.map((r) => (
-                      <option key={r.id} value={r.id}>{r.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              {rtList.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">RT</label>
-                  <select
-                    value={rtList.find((r) => r.name === createForm.rt)?.id || ''}
-                    onChange={(e) => {
-                      const rt = rtList.find((r) => r.id === e.target.value);
-                      setCreateForm((p) => ({ ...p, rt: rt?.name || e.target.value }));
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    <option value="">Pilih RT (opsional)</option>
-                    {rtList.map((r) => (
-                      <option key={r.id} value={r.id}>{r.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {createError && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{createError}</div>
-              )}
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={creating}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
-                >
-                  {creating ? 'Menyimpan...' : 'Simpan User'}
-                </button>
-              </div>
-            </form>
+      <Modal open={showCreateModal} onClose={() => setShowCreateModal(false)} title="Tambah User Baru" size="lg">
+        <form onSubmit={handleCreate} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap *</label>
+            <Input
+              type="text"
+              required
+              value={createForm.name}
+              onChange={(e) => setCreateForm((p) => ({ ...p, name: e.target.value }))}
+              placeholder="Masukkan nama lengkap"
+            />
           </div>
-        </div>
-      )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+            <Input
+              type="email"
+              required
+              value={createForm.email}
+              onChange={(e) => setCreateForm((p) => ({ ...p, email: e.target.value }))}
+              placeholder="user@example.com"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+            <Input
+              type="password"
+              required
+              minLength={6}
+              value={createForm.password}
+              onChange={(e) => setCreateForm((p) => ({ ...p, password: e.target.value }))}
+              placeholder="Minimal 6 karakter"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
+            <Select
+              required
+              value={createForm.role}
+              onChange={(e) => setCreateForm((p) => ({ ...p, role: e.target.value }))}
+            >
+              {roleOptions.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">No. Telepon</label>
+            <Input
+              type="text"
+              value={createForm.phone}
+              onChange={(e) => setCreateForm((p) => ({ ...p, phone: e.target.value }))}
+              placeholder="081234567890"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Desa *</label>
+            <Select
+              required
+              value={desaList.find((d) => d.name === createForm.desa)?.id || ''}
+              onChange={(e) => handleCreateDesaChange(e.target.value)}
+            >
+              <option value="">Pilih Desa</option>
+              {desaList.map((d) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </Select>
+          </div>
+          {rwList.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">RW</label>
+              <Select
+                value={rwList.find((r) => r.name === createForm.rw)?.id || ''}
+                onChange={(e) => handleCreateRwChange(e.target.value)}
+              >
+                <option value="">Pilih RW (opsional)</option>
+                {rwList.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </Select>
+            </div>
+          )}
+          {rtList.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">RT</label>
+              <Select
+                value={rtList.find((r) => r.name === createForm.rt)?.id || ''}
+                onChange={(e) => {
+                  const rt = rtList.find((r) => r.id === e.target.value);
+                  setCreateForm((p) => ({ ...p, rt: rt?.name || e.target.value }));
+                }}
+              >
+                <option value="">Pilih RT (opsional)</option>
+                {rtList.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </Select>
+            </div>
+          )}
+
+          {createError && (
+            <div className="p-3 bg-danger-bg border border-danger-border rounded-md text-sm text-danger-text">{createError}</div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-2">
+            <Button type="button" variant="secondary" onClick={() => setShowCreateModal(false)}>
+              Batal
+            </Button>
+            <Button type="submit" disabled={creating}>
+              {creating ? 'Menyimpan...' : 'Simpan User'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Edit User Modal */}
-      {showEditModal && editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-xl shadow-lg p-6 max-w-lg mx-4 w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Edit User: {editingUser.name}</h3>
-              <button onClick={() => setShowEditModal(false)} className="p-1 hover:bg-gray-100 rounded">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={handleUpdate} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
-                <input
-                  type="text"
-                  value={editForm.name}
-                  onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">No. Telepon</label>
-                <input
-                  type="text"
-                  value={editForm.phone}
-                  onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                <select
-                  value={editForm.role}
-                  onChange={(e) => setEditForm((p) => ({ ...p, role: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                >
-                  {availableRoles.map((r) => (
-                    <option key={r} value={r}>{RoleLabels[r]}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Desa</label>
-                <select
-                  value={desaList.find((d) => d.name === editForm.desa)?.id || ''}
-                  onChange={(e) => handleEditDesaChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                >
-                  <option value="">Pilih Desa</option>
-                  {desaList.map((d) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
-                {editForm.desa && !desaList.find((d) => d.name === editForm.desa) && (
-                  <p className="text-xs text-gray-500 mt-1">Desa saat ini: {editForm.desa}</p>
-                )}
-              </div>
-              {editRwList.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">RW</label>
-                  <select
-                    value={editRwList.find((r) => r.name === editForm.rw)?.id || ''}
-                    onChange={(e) => handleEditRwChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    <option value="">Pilih RW</option>
-                    {editRwList.map((r) => (
-                      <option key={r.id} value={r.id}>{r.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              {editRtList.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">RT</label>
-                  <select
-                    value={editRtList.find((r) => r.name === editForm.rt)?.id || ''}
-                    onChange={(e) => {
-                      const rt = editRtList.find((r) => r.id === e.target.value);
-                      setEditForm((p) => ({ ...p, rt: rt?.name || e.target.value }));
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    <option value="">Pilih RT</option>
-                    {editRtList.map((r) => (
-                      <option key={r.id} value={r.id}>{r.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              <div className="flex items-center gap-3">
-                <label className="text-sm font-medium text-gray-700">Status Aktif</label>
-                <button
-                  type="button"
-                  onClick={() => setEditForm((p) => ({ ...p, isActive: !p.isActive }))}
-                  className={cn(
-                    'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                    editForm.isActive ? 'bg-green-500' : 'bg-gray-300',
-                  )}
-                >
-                  <span
-                    className={cn(
-                      'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
-                      editForm.isActive ? 'translate-x-6' : 'translate-x-1',
-                    )}
-                  />
-                </button>
-                <span className="text-sm text-gray-600">{editForm.isActive ? 'Aktif' : 'Nonaktif'}</span>
-              </div>
-
-              {editError && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{editError}</div>
-              )}
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={updating}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
-                >
-                  {updating ? 'Menyimpan...' : 'Simpan Perubahan'}
-                </button>
-              </div>
-            </form>
+      <Modal
+        open={showEditModal && !!editingUser}
+        onClose={() => setShowEditModal(false)}
+        title={`Edit User: ${editingUser?.name ?? ''}`}
+        size="lg"
+      >
+        <form onSubmit={handleUpdate} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
+            <Input
+              type="text"
+              value={editForm.name}
+              onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))}
+            />
           </div>
-        </div>
-      )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">No. Telepon</label>
+            <Input
+              type="text"
+              value={editForm.phone}
+              onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            <Select
+              value={editForm.role}
+              onChange={(e) => setEditForm((p) => ({ ...p, role: e.target.value }))}
+            >
+              {roleOptions.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Desa</label>
+            <Select
+              value={desaList.find((d) => d.name === editForm.desa)?.id || ''}
+              onChange={(e) => handleEditDesaChange(e.target.value)}
+            >
+              <option value="">Pilih Desa</option>
+              {desaList.map((d) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </Select>
+            {editForm.desa && !desaList.find((d) => d.name === editForm.desa) && (
+              <p className="text-xs text-gray-500 mt-1">Desa saat ini: {editForm.desa}</p>
+            )}
+          </div>
+          {editRwList.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">RW</label>
+              <Select
+                value={editRwList.find((r) => r.name === editForm.rw)?.id || ''}
+                onChange={(e) => handleEditRwChange(e.target.value)}
+              >
+                <option value="">Pilih RW</option>
+                {editRwList.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </Select>
+            </div>
+          )}
+          {editRtList.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">RT</label>
+              <Select
+                value={editRtList.find((r) => r.name === editForm.rt)?.id || ''}
+                onChange={(e) => {
+                  const rt = editRtList.find((r) => r.id === e.target.value);
+                  setEditForm((p) => ({ ...p, rt: rt?.name || e.target.value }));
+                }}
+              >
+                <option value="">Pilih RT</option>
+                {editRtList.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </Select>
+            </div>
+          )}
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-gray-700">Status Aktif</label>
+            <button
+              type="button"
+              onClick={() => setEditForm((p) => ({ ...p, isActive: !p.isActive }))}
+              className={cn(
+                'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                editForm.isActive ? 'bg-primary-600' : 'bg-gray-300',
+              )}
+            >
+              <span
+                className={cn(
+                  'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                  editForm.isActive ? 'translate-x-6' : 'translate-x-1',
+                )}
+              />
+            </button>
+            <span className="text-sm text-gray-600">{editForm.isActive ? 'Aktif' : 'Nonaktif'}</span>
+          </div>
+
+          {editError && (
+            <div className="p-3 bg-danger-bg border border-danger-border rounded-md text-sm text-danger-text">{editError}</div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-2">
+            <Button type="button" variant="secondary" onClick={() => setShowEditModal(false)}>
+              Batal
+            </Button>
+            <Button type="submit" disabled={updating}>
+              {updating ? 'Menyimpan...' : 'Simpan Perubahan'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Delete Confirmation Modal */}
-      {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-xl shadow-lg p-6 max-w-md mx-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                <AlertCircle className="w-6 h-6 text-red-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Hapus User</h3>
-                <p className="text-sm text-gray-600">User yang dihapus tidak dapat dikembalikan</p>
-              </div>
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setDeleteId(null)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                Batal
-              </button>
-              <button
-                onClick={() => handleDelete(deleteId)}
-                disabled={deleting}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
-              >
-                {deleting ? 'Menghapus...' : 'Ya, Hapus'}
-              </button>
-            </div>
+      <Modal open={!!deleteId} onClose={() => setDeleteId(null)}>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-danger-bg rounded-full flex items-center justify-center">
+            <AlertCircle className="w-5 h-5 text-danger-text" />
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-gray-900">Hapus User</h3>
+            <p className="text-sm text-gray-600">User yang dihapus tidak dapat dikembalikan</p>
           </div>
         </div>
-      )}
+        <div className="flex justify-end gap-3">
+          <Button variant="secondary" onClick={() => setDeleteId(null)}>
+            Batal
+          </Button>
+          <Button variant="danger" onClick={() => deleteId && handleDelete(deleteId)} disabled={deleting}>
+            {deleting ? 'Menghapus...' : 'Ya, Hapus'}
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

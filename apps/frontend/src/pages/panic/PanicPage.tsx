@@ -3,6 +3,7 @@ import { panicService } from '../../services/panic.service';
 import { useAuthStore } from '../../stores/auth.store';
 import { canPerformAction } from '../../config/permissions';
 import { useRegionScope } from '../../hooks/useRegionScope';
+import { resolveFileUrl } from '../../utils/file-url';
 import {
   AlertCircle, MapPin, AlertTriangle, Camera, X, Navigation,
   Image as ImageIcon, Eye, Clock, User, FileText,
@@ -47,8 +48,6 @@ const getMarkerIcon = (status: string) => {
 
 const emergencyTypes = ['Kebakaran', 'Pencurian', 'Kesehatan', 'Kecelakaan', 'Bencana Alam', 'Lainnya'];
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
-const UPLOADS_BASE = API_URL.replace('/api/v1', '');
 
 export default function PanicPage() {
   const { user } = useAuthStore();
@@ -317,10 +316,10 @@ export default function PanicPage() {
                     {a.fotoUrl && (
                       <div className="mt-2">
                         <img
-                          src={`${UPLOADS_BASE}${a.fotoUrl}`}
+                          src={resolveFileUrl(a.fotoUrl)}
                           alt="Foto bukti"
                           className="h-24 w-auto rounded-lg border border-red-200 object-cover cursor-pointer hover:opacity-80 transition"
-                          onClick={() => setPreviewUrl(`${UPLOADS_BASE}${a.fotoUrl}`)}
+                          onClick={() => setPreviewUrl(resolveFileUrl(a.fotoUrl))}
                         />
                       </div>
                     )}
@@ -416,10 +415,10 @@ export default function PanicPage() {
                           )}
                           {a.fotoUrl && (
                             <img
-                              src={`${UPLOADS_BASE}${a.fotoUrl}`}
+                              src={resolveFileUrl(a.fotoUrl)}
                               alt="Foto"
                               className="w-full h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 transition"
-                              onClick={() => setPreviewUrl(`${UPLOADS_BASE}${a.fotoUrl}`)}
+                              onClick={() => setPreviewUrl(resolveFileUrl(a.fotoUrl))}
                             />
                           )}
                           {a.respondedByName && (
@@ -492,10 +491,10 @@ export default function PanicPage() {
                   <td className="px-6 py-4">
                     {a.fotoUrl ? (
                       <img
-                        src={`${UPLOADS_BASE}${a.fotoUrl}`}
+                        src={resolveFileUrl(a.fotoUrl)}
                         alt="Foto"
                         className="h-10 w-10 rounded object-cover cursor-pointer hover:opacity-80 transition"
-                        onClick={() => setPreviewUrl(`${UPLOADS_BASE}${a.fotoUrl}`)}
+                        onClick={() => setPreviewUrl(resolveFileUrl(a.fotoUrl))}
                       />
                     ) : (
                       <span className="text-gray-300"><ImageIcon className="w-5 h-5" /></span>
@@ -794,10 +793,10 @@ export default function PanicPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Foto Bukti</label>
                   <img
-                    src={`${UPLOADS_BASE}${detailAlert.fotoUrl}`}
+                    src={resolveFileUrl(detailAlert.fotoUrl)}
                     alt="Foto bukti"
                     className="w-full max-h-56 object-contain rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition"
-                    onClick={() => setPreviewUrl(`${UPLOADS_BASE}${detailAlert.fotoUrl}`)}
+                    onClick={() => setPreviewUrl(resolveFileUrl(detailAlert.fotoUrl))}
                   />
                 </div>
               )}

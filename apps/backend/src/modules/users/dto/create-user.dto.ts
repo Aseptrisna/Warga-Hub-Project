@@ -2,7 +2,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsEmail,
   IsString,
-  IsEnum,
   MinLength,
   MaxLength,
   IsOptional,
@@ -26,9 +25,9 @@ export class CreateUserDto {
   @MaxLength(100, { message: 'Nama maksimal 100 karakter' })
   name: string;
 
-  @ApiProperty({ example: Role.WARGA, enum: Role, description: 'User role' })
-  @IsEnum(Role, { message: 'Role tidak valid' })
-  role: Role;
+  @ApiProperty({ example: Role.WARGA, description: 'Built-in Role enum value, or a custom role code' })
+  @IsString()
+  role: string;
 
   @ApiProperty({ example: '081234567890', required: false })
   @IsOptional()

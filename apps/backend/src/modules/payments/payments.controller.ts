@@ -4,10 +4,11 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { s3Storage } from '../../common/services/s3-storage';
 import { PaymentsService } from './payments.service';
+import { CreatePaymentDto } from './dto/create-payment.dto';
+import { UpdatePaymentDto } from './dto/update-payment.dto';
+import { GenerateBulkDto } from './dto/generate-bulk.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -15,13 +16,7 @@ import { Role } from '../../common/enums/role.enum';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { getRegionScope } from '../../common/helpers/region-scope.helper';
 
-const buktiStorage = diskStorage({
-  destination: './uploads/payments',
-  filename: (_req, file, cb) => {
-    const uniqueName = `bukti-${uuidv4()}${extname(file.originalname)}`;
-    cb(null, uniqueName);
-  },
-});
+const buktiStorage = s3Storage('payments');
 
 const buktiFilter = (_req: any, file: any, cb: any) => {
   if (file.mimetype.match(/\/(jpg|jpeg|png|pdf)$/)) {
@@ -50,8 +45,8 @@ export class PaymentsController {
     Role.KAUR_KEUANGAN, Role.KETUA_RW, Role.KETUA_RT, Role.ADMIN_RT,
   )
   @ApiOperation({ summary: 'Create payment record' })
-  create(@Body() data: any, @CurrentUser() user: any) {
-    return this.service.create(data, user.id, user.name);
+  create(@Body() dto: CreatePaymentDto, @CurrentUser() user: any) {
+    return this.service.create(dto, user.id, user.name);
   }
 
   @Post('generate-bulk')
@@ -61,9 +56,9 @@ export class PaymentsController {
     Role.KETUA_RW, Role.ADMIN_RW, Role.KETUA_RT, Role.ADMIN_RT,
   )
   @ApiOperation({ summary: 'Generate bulk payment records for all citizens x iuran types' })
-  generateBulk(@Body() data: any, @CurrentUser() user: any) {
+  generateBulk(@Body() dto: GenerateBulkDto, @CurrentUser() user: any) {
     const scope = getRegionScope(user);
-    return this.service.generateBulk({ ...data, ...scope }, user);
+    return this.service.generateBulk({ ...dto, ...scope }, user);
   }
 
   @Get()
@@ -104,8 +99,8 @@ export class PaymentsController {
   @Patch(':id')
   @Roles(Role.SUPER_ADMIN, Role.ADMIN_PLATFORM, Role.KAUR_KEUANGAN, Role.KETUA_RT, Role.ADMIN_RT)
   @ApiOperation({ summary: 'Update payment' })
-  update(@Param('id') id: string, @Body() data: any, @CurrentUser() user: any) {
-    return this.service.update(id, data, user);
+  update(@Param('id') id: string, @Body() dto: UpdatePaymentDto, @CurrentUser() user: any) {
+    return this.service.update(id, dto, user);
   }
 
   @Post(':id/upload-bukti')
@@ -123,8 +118,26 @@ export class PaymentsController {
     @UploadedFile() file: Express.Multer.File,
     @CurrentUser() user: any,
   ) {
-    const fileUrl = `/uploads/payments/${file.filename}`;
-    return this.service.uploadBukti(id, fileUrl, user);
+    return this.service.uploadBukti(id, (file as any).location, user);
+  }
+
+  @Post('send-reminders')
+  @Roles(Role.SUPER_ADMIN, Role.ADMIN_PLATFORM, Role.KAUR_KEUANGAN)
+  @ApiOperation({ summary: 'Manually trigger the iuran due-date reminder job (also runs daily at 08:00 WIB)' })
+  sendReminders() {
+    return this.service.runDueReminders();
+  }
+
+  @Post(':id/qris')
+  @ApiOperation({ summary: 'Create QRIS payment link via payment gateway' })
+  createQris(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.service.createQrisPayment(id, user);
+  }
+
+  @Get(':id/qris-status')
+  @ApiOperation({ summary: 'Poll QRIS payment status (fallback if webhook missed)' })
+  getQrisStatus(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.service.getQrisStatus(id, user);
   }
 
   @Patch(':id/verify')

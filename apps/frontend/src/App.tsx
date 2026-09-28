@@ -32,6 +32,7 @@ import GuestbookPage from './pages/guestbook/GuestbookPage';
 import NotificationsPage from './pages/notifications/NotificationsPage';
 import AuditLogPage from './pages/audit/AuditLogPage';
 import UserManagementPage from './pages/admin/UserManagementPage';
+import RoleManagementPage from './pages/roles/RoleManagementPage';
 import MyProfilePage from './pages/profile/MyProfilePage';
 import WargaActivationPage from './pages/admin/WargaActivationPage';
 import DesaProfilePage from './pages/desa/DesaProfilePage';
@@ -130,6 +131,7 @@ function App() {
 
                   {/* Admin - User Management */}
                   <Route path="/admin/users" element={<UserManagementPage />} />
+                  <Route path="/admin/roles" element={<RoleManagementPage />} />
 
                   {/* Admin - Warga Activation */}
                   <Route path="/admin/activations" element={<WargaActivationPage />} />

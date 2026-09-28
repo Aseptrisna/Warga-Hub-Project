@@ -13,9 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { s3Storage } from '../../common/services/s3-storage';
 import { FamiliesService } from './families.service';
 import { CreateFamilyDto } from './dto/create-family.dto';
 import { UpdateFamilyDto } from './dto/update-family.dto';
@@ -26,13 +24,7 @@ import { Role } from '../../common/enums/role.enum';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { getRegionScope } from '../../common/helpers/region-scope.helper';
 
-const familyStorage = diskStorage({
-  destination: './uploads/families',
-  filename: (req, file, cb) => {
-    const uniqueName = `kk-${uuidv4()}${extname(file.originalname)}`;
-    cb(null, uniqueName);
-  },
-});
+const familyStorage = s3Storage('families');
 
 const docFilter = (req: any, file: any, cb: any) => {
   if (file.mimetype.match(/\/(jpg|jpeg|png|pdf)$/)) {
@@ -126,7 +118,6 @@ export class FamiliesController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { storage: familyStorage, fileFilter: docFilter, limits: { fileSize: 5 * 1024 * 1024 } }))
   async uploadKK(@Param('id') id: string, @UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
-    const fileUrl = `/uploads/families/${file.filename}`;
-    return this.familiesService.update(id, { kkUrl: fileUrl } as any, user);
+    return this.familiesService.update(id, { kkUrl: (file as any).location } as any, user);
   }
 }

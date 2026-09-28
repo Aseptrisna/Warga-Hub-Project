@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
   BadRequestException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
@@ -25,6 +26,8 @@ import { Role } from '../../common/enums/role.enum';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Citizen.name) private citizenModel: Model<Citizen>,
@@ -341,6 +344,7 @@ export class AuthService {
         ...tokens,
       };
     } catch (error) {
+      this.logger.debug(`Refresh token rejected: ${(error as Error).message}`);
       throw new UnauthorizedException('Token tidak valid atau sudah kadaluarsa');
     }
   }
@@ -384,10 +388,8 @@ export class AuthService {
     user.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
     await user.save();
 
-    // TODO: Send email with reset link
+    await this.emailService.sendPasswordResetEmail(user.email, user.name, resetToken);
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-
-    console.log(`Reset password URL: ${resetUrl}`);
 
     return {
       message: 'Jika email terdaftar, link reset password telah dikirim',

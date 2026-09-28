@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { publicRegionsService } from '../../services/regions.service';
+import { resolveFileUrl } from '../../utils/file-url';
 import {
   Loader2, MapPin, Phone, Mail, Users, ArrowLeft,
   CheckCircle2, Globe,
@@ -77,7 +78,6 @@ export default function DesaPublicPage() {
   }
 
   const config = data.landingConfig || {};
-  const apiBase = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
 
   return (
     <div className="min-h-screen bg-white">
@@ -87,7 +87,7 @@ export default function DesaPublicPage() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
               {data.logoUrl ? (
-                <img src={`${apiBase}${data.logoUrl}`} alt="Logo" className="w-9 h-9 rounded-xl object-cover" />
+                <img src={resolveFileUrl(data.logoUrl)} alt="Logo" className="w-9 h-9 rounded-xl object-cover" />
               ) : (
                 <div className="w-9 h-9 rounded-xl bg-primary-600 flex items-center justify-center">
                   <span className="text-white font-bold text-lg">{data.name.charAt(0)}</span>
@@ -112,7 +112,7 @@ export default function DesaPublicPage() {
 
         {data.bannerUrl && (
           <div className="absolute inset-0">
-            <img src={`${apiBase}${data.bannerUrl}`} alt="Banner" className="w-full h-full object-cover opacity-20" />
+            <img src={resolveFileUrl(data.bannerUrl)} alt="Banner" className="w-full h-full object-cover opacity-20" />
           </div>
         )}
 

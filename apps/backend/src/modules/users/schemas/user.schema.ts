@@ -17,8 +17,11 @@ export class User extends BaseSchema {
   @Prop({ required: true, trim: true })
   name: string;
 
-  @Prop({ required: true, enum: Role, default: Role.WARGA })
-  role: Role;
+  // Plain string (not a strict Mongoose enum) so this can also hold a
+  // custom role's `code` (see modules/custom-roles). Validity - built-in
+  // Role enum value or an active CustomRole - is enforced in UsersService.
+  @Prop({ required: true, type: String, default: Role.WARGA })
+  role: string;
 
   @Prop({ trim: true })
   phone?: string;
@@ -97,6 +100,12 @@ UserSchema.methods.comparePassword = async function (
 ): Promise<boolean> {
   return bcrypt.compare(candidatePassword, this.password);
 };
+
+// Supports UsersService.findAll/getStatistics filters and sorts
+UserSchema.index({ role: 1 });
+UserSchema.index({ isActive: 1 });
+UserSchema.index({ desa: 1, rw: 1, rt: 1 });
+UserSchema.index({ createdAt: -1 });
 
 // Remove password from JSON output
 UserSchema.set('toJSON', {

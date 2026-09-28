@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Announcement } from './schemas/announcement.schema';
@@ -7,6 +7,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class AnnouncementsService {
+  private readonly logger = new Logger(AnnouncementsService.name);
+
   constructor(
     @InjectModel(Announcement.name) private announcementModel: Model<Announcement>,
     private readonly auditService: AuditService,
@@ -42,7 +44,7 @@ export class AnnouncementsService {
         referenceId: announcement._id,
         referenceUrl: `/announcements/${announcement._id}`,
       },
-    );
+    ).catch((err) => this.logger.error('Failed to notify users of new announcement', err));
 
     return { message: 'Pengumuman berhasil dibuat', data: announcement };
   }

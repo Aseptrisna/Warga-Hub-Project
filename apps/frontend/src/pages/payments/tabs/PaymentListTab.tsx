@@ -3,9 +3,18 @@ import { paymentsService } from '../../../services/payments.service';
 import { useRegionScope } from '../../../hooks/useRegionScope';
 import { useAuthStore } from '../../../stores/auth.store';
 import { canPerformAction } from '../../../config/permissions';
+import { resolveFileUrl } from '../../../utils/file-url';
 import { Role } from '@shared/role.enum';
-import { DollarSign, Clock, CheckCircle, XCircle, Upload, Eye, X, ChevronLeft, ChevronRight, FileSpreadsheet } from 'lucide-react';
+import { DollarSign, Clock, CheckCircle, XCircle, Upload, Eye, X, ChevronLeft, ChevronRight, FileSpreadsheet, QrCode, BellRing } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { StatTile } from '../../../components/ui/StatTile';
+import { Card } from '../../../components/ui/Card';
+import { Table, Thead, Tbody, Th, Td } from '../../../components/ui/Table';
+import { Badge } from '../../../components/ui/Badge';
+import { Button } from '../../../components/ui/Button';
+import { Modal } from '../../../components/ui/Modal';
+import { Input, Select, Textarea } from '../../../components/ui/Input';
+import { EmptyState } from '../../../components/ui/EmptyState';
 
 const MONTHS = [
   { value: 1, label: 'Januari' }, { value: 2, label: 'Februari' }, { value: 3, label: 'Maret' },
@@ -17,11 +26,21 @@ const MONTHS = [
 const STATUS_OPTIONS = ['Belum Bayar', 'Menunggu Verifikasi', 'Lunas', 'Ditolak'];
 const PER_PAGE = 10;
 
+const STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = {
+  Lunas: 'success',
+  'Menunggu Verifikasi': 'warning',
+  'Belum Bayar': 'danger',
+  Ditolak: 'neutral',
+};
+
 export default function PaymentListTab() {
   const scope = useRegionScope();
   const user = useAuthStore((s) => s.user);
   const isAdmin = user ? canPerformAction(user.role, 'payments', 'verify') : false;
   const isWarga = user?.role === Role.WARGA;
+  const canSendReminders = user
+    ? [Role.SUPER_ADMIN, Role.ADMIN_PLATFORM, Role.KAUR_KEUANGAN].includes(user.role)
+    : false;
 
   const [payments, setPayments] = useState<any[]>([]);
   const [stats, setStats] = useState<any>({});
@@ -49,9 +68,44 @@ export default function PaymentListTab() {
   // Preview bukti
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
+  // QRIS payment
+  const [qrisLoadingId, setQrisLoadingId] = useState<string | null>(null);
+
+  // Reminder iuran
+  const [sendingReminders, setSendingReminders] = useState(false);
+
   useEffect(() => {
     loadData();
   }, [filterBulan, filterTahun, filterStatus, search, page]);
+
+  // Landed back from the QRIS hosted payment page (success/cancel return URL)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const qrisResult = params.get('qris');
+    const paymentId = params.get('paymentId');
+    if (!qrisResult || !paymentId) return;
+
+    window.history.replaceState({}, '', window.location.pathname);
+
+    if (qrisResult === 'cancel') {
+      Swal.fire({ icon: 'info', title: 'Pembayaran Dibatalkan', timer: 3000, showConfirmButton: false });
+      return;
+    }
+
+    paymentsService
+      .getQrisStatus(paymentId)
+      .then((res) => {
+        const status = res.data?.status;
+        if (status === 'Lunas') {
+          Swal.fire({ icon: 'success', title: 'Pembayaran Berhasil!', text: 'Tagihan sudah lunas.', timer: 3000, showConfirmButton: false });
+        } else {
+          Swal.fire({ icon: 'info', title: 'Menunggu Konfirmasi', text: 'Pembayaran sedang diproses oleh payment gateway.', timer: 3000, showConfirmButton: false });
+        }
+        loadData();
+      })
+      .catch(() => loadData());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadData = async () => {
     try {
@@ -80,16 +134,6 @@ export default function PaymentListTab() {
       console.error('Error loading payments:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Lunas': return 'bg-green-100 text-green-800 border-green-200';
-      case 'Menunggu Verifikasi': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'Belum Bayar': return 'bg-red-100 text-red-800 border-red-200';
-      case 'Ditolak': return 'bg-gray-100 text-gray-800 border-gray-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -124,6 +168,47 @@ export default function PaymentListTab() {
     }
   };
 
+  const handlePayQris = async (paymentId: string) => {
+    try {
+      setQrisLoadingId(paymentId);
+      const res = await paymentsService.createQris(paymentId);
+      const linkUrl = res.data?.qrisPaymentLinkUrl;
+      if (linkUrl) {
+        window.open(linkUrl, '_blank', 'noopener,noreferrer');
+      }
+      loadData();
+    } catch (error: any) {
+      console.error('Error creating QRIS payment:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Membuat Pembayaran QRIS',
+        text: error?.response?.data?.message || 'Terjadi kesalahan saat membuat pembayaran QRIS',
+      });
+    } finally {
+      setQrisLoadingId(null);
+    }
+  };
+
+  const handleSendReminders = async () => {
+    try {
+      setSendingReminders(true);
+      const res = await paymentsService.sendReminders();
+      Swal.fire({
+        icon: 'success',
+        title: 'Reminder Terkirim',
+        text: `${res.remindersSent ?? 0} reminder berhasil dikirim${res.skipped ? `, ${res.skipped} dilewati (belum ada akun warga terhubung)` : ''}.`,
+      });
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Mengirim Reminder',
+        text: error?.response?.data?.message || 'Terjadi kesalahan',
+      });
+    } finally {
+      setSendingReminders(false);
+    }
+  };
+
   const handleVerify = async (status: 'Lunas' | 'Ditolak') => {
     if (!verifyModal.payment) return;
 
@@ -139,7 +224,7 @@ export default function PaymentListTab() {
         : `Tolak pembayaran ${verifyModal.payment.citizenName}?`,
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: status === 'Lunas' ? '#16a34a' : '#ef4444',
+      confirmButtonColor: status === 'Lunas' ? '#15803d' : '#b91c1c',
       cancelButtonColor: '#6b7280',
       confirmButtonText: status === 'Lunas' ? 'Ya, Terima' : 'Ya, Tolak',
       cancelButtonText: 'Batal',
@@ -210,7 +295,7 @@ export default function PaymentListTab() {
       ]);
 
       const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-      const BOM = '\uFEFF';
+      const BOM = '﻿';
       const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -227,184 +312,164 @@ export default function PaymentListTab() {
     }
   };
 
-  const apiBaseUrl = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:3000';
-
   const startItem = (page - 1) * PER_PAGE + 1;
   const endItem = Math.min(page * PER_PAGE, total);
 
   return (
     <div>
-      {/* Stats Cards */}
+      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600">Total Tagihan</span>
-            <DollarSign className="w-5 h-5 text-gray-400" />
-          </div>
-          <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.totalTagihan || 0)}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600">Lunas</span>
-            <CheckCircle className="w-5 h-5 text-green-500" />
-          </div>
-          <p className="text-2xl font-bold text-green-600">{stats.totalLunas || 0}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600">Menunggu Verifikasi</span>
-            <Clock className="w-5 h-5 text-yellow-500" />
-          </div>
-          <p className="text-2xl font-bold text-yellow-600">{stats.totalMenunggu || 0}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600">Belum Bayar</span>
-            <XCircle className="w-5 h-5 text-red-500" />
-          </div>
-          <p className="text-2xl font-bold text-red-600">{stats.totalBelumBayar || 0}</p>
-        </div>
+        <StatTile label="Total Tagihan" value={formatCurrency(stats.totalTagihan || 0)} icon={DollarSign} />
+        <StatTile label="Lunas" value={stats.totalLunas || 0} icon={CheckCircle} tone="success" />
+        <StatTile label="Menunggu Verifikasi" value={stats.totalMenunggu || 0} icon={Clock} tone="warning" />
+        <StatTile label="Belum Bayar" value={stats.totalBelumBayar || 0} icon={XCircle} tone="danger" />
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
         {!isWarga && (
-          <input
+          <Input
             type="text"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="Cari nama warga..."
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm w-56 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-56"
           />
         )}
-        <select
+        <Select
           value={filterBulan}
           onChange={(e) => { setFilterBulan(e.target.value); setPage(1); }}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+          className="w-auto"
         >
           <option value="">Semua Bulan</option>
           {MONTHS.map((m) => (
             <option key={m.value} value={m.value}>{m.label}</option>
           ))}
-        </select>
-        <input
+        </Select>
+        <Input
           type="number"
           value={filterTahun}
           onChange={(e) => { setFilterTahun(e.target.value); setPage(1); }}
           placeholder="Tahun"
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm w-24 focus:ring-2 focus:ring-blue-500"
+          className="w-24"
         />
-        <select
+        <Select
           value={filterStatus}
           onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+          className="w-auto"
         >
           <option value="">Semua Status</option>
           {STATUS_OPTIONS.map((s) => (
             <option key={s} value={s}>{s}</option>
           ))}
-        </select>
-        <div className="ml-auto">
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center gap-2 px-4 py-2 border border-green-600 text-green-700 rounded-lg hover:bg-green-50 text-sm font-medium"
-            title="Export CSV"
-          >
+        </Select>
+        <div className="ml-auto flex gap-2">
+          {canSendReminders && (
+            <Button
+              variant="secondary"
+              onClick={handleSendReminders}
+              disabled={sendingReminders}
+              title="Kirim reminder iuran jatuh tempo/terlambat sekarang (otomatis jalan tiap hari jam 08:00)"
+            >
+              <BellRing className="w-4 h-4" /> {sendingReminders ? 'Mengirim...' : 'Kirim Reminder'}
+            </Button>
+          )}
+          <Button variant="secondary" onClick={handleExportCSV} title="Export CSV">
             <FileSpreadsheet className="w-4 h-4" /> Export
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <Card className="overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Loading...</div>
+          <div className="p-8 text-center text-sm text-gray-500">Memuat data...</div>
         ) : payments.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">Belum ada data pembayaran</div>
+          <EmptyState icon={DollarSign} title="Belum ada data pembayaran" />
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase w-12">No</th>
-                    {!isWarga && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nama</th>}
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jenis Iuran</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Periode</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Jumlah</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Bukti</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {payments.map((payment, idx) => (
-                    <tr key={payment.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-4 text-sm text-gray-500 text-center">{startItem + idx}</td>
-                      {!isWarga && (
-                        <td className="px-6 py-4">
-                          <div className="text-sm font-medium text-gray-900">{payment.citizenName}</div>
-                          <div className="text-xs text-gray-500">RT {payment.rt} / RW {payment.rw}</div>
-                        </td>
+            <Table>
+              <Thead>
+                <tr>
+                  <Th align="center" className="w-12">No</Th>
+                  {!isWarga && <Th>Nama</Th>}
+                  <Th>Jenis Iuran</Th>
+                  <Th align="center">Periode</Th>
+                  <Th align="right">Jumlah</Th>
+                  <Th align="center">Status</Th>
+                  <Th align="center">Bukti</Th>
+                  <Th align="center">Aksi</Th>
+                </tr>
+              </Thead>
+              <Tbody>
+                {payments.map((payment, idx) => (
+                  <tr key={payment.id} className="hover:bg-gray-50">
+                    <Td align="center" className="text-gray-500">{startItem + idx}</Td>
+                    {!isWarga && (
+                      <Td>
+                        <div className="text-sm font-medium text-gray-900">{payment.citizenName}</div>
+                        <div className="text-xs text-gray-500">RT {payment.rt} / RW {payment.rw}</div>
+                      </Td>
+                    )}
+                    <Td>{payment.iuranTypeName || payment.jenis}</Td>
+                    <Td align="center" className="text-gray-500">
+                      {MONTHS.find((m) => m.value === payment.bulan)?.label || payment.bulan}/{payment.tahun}
+                    </Td>
+                    <Td align="right" className="font-medium text-gray-900">
+                      {formatCurrency(payment.jumlah)}
+                    </Td>
+                    <Td align="center">
+                      <Badge tone={STATUS_TONE[payment.status] || 'neutral'}>{payment.status}</Badge>
+                    </Td>
+                    <Td align="center">
+                      {payment.buktiBayarUrl ? (
+                        <button
+                          onClick={() => setPreviewUrl(resolveFileUrl(payment.buktiBayarUrl))}
+                          className="p-1.5 text-primary-600 hover:bg-primary-50 rounded-md"
+                          title="Lihat bukti"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <span className="text-xs text-gray-400">-</span>
                       )}
-                      <td className="px-6 py-4 text-sm text-gray-900">{payment.iuranTypeName || payment.jenis}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500 text-center">
-                        {MONTHS.find((m) => m.value === payment.bulan)?.label || payment.bulan}/{payment.tahun}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 text-right font-medium">
-                        {formatCurrency(payment.jumlah)}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(payment.status)}`}>
-                          {payment.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        {payment.buktiBayarUrl ? (
-                          <button
-                            onClick={() => setPreviewUrl(`${apiBaseUrl}${payment.buktiBayarUrl}`)}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
-                            title="Lihat bukti"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                        ) : (
-                          <span className="text-xs text-gray-400">-</span>
+                    </Td>
+                    <Td align="center">
+                      <div className="flex items-center justify-center gap-1">
+                        {(payment.status === 'Belum Bayar' || payment.status === 'Ditolak') && (isWarga || isAdmin) && (
+                          <Button size="sm" onClick={() => setUploadModal({ show: true, paymentId: payment.id })}>
+                            <Upload className="w-3.5 h-3.5" /> Upload Bukti
+                          </Button>
                         )}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          {(payment.status === 'Belum Bayar' || payment.status === 'Ditolak') && (isWarga || isAdmin) && (
-                            <button
-                              onClick={() => setUploadModal({ show: true, paymentId: payment.id })}
-                              className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-medium flex items-center gap-1"
-                            >
-                              <Upload className="w-3.5 h-3.5" /> Bayar
-                            </button>
-                          )}
-                          {payment.status === 'Menunggu Verifikasi' && isAdmin && (
-                            <button
-                              onClick={() => setVerifyModal({ show: true, payment })}
-                              className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-xs font-medium"
-                            >
-                              Verifikasi
-                            </button>
-                          )}
-                          {payment.status === 'Ditolak' && payment.rejectionReason && (
-                            <span className="text-xs text-red-500" title={payment.rejectionReason}>
-                              Alasan: {payment.rejectionReason}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        {(payment.status === 'Belum Bayar' || payment.status === 'Ditolak') && isWarga && (
+                          <Button
+                            size="sm"
+                            className="bg-indigo-600 hover:bg-indigo-700"
+                            onClick={() => handlePayQris(payment.id)}
+                            disabled={qrisLoadingId === payment.id}
+                          >
+                            <QrCode className="w-3.5 h-3.5" /> {qrisLoadingId === payment.id ? 'Memproses...' : 'Bayar QRIS'}
+                          </Button>
+                        )}
+                        {payment.status === 'Menunggu Verifikasi' && isAdmin && (
+                          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setVerifyModal({ show: true, payment })}>
+                            Verifikasi
+                          </Button>
+                        )}
+                        {payment.status === 'Ditolak' && payment.rejectionReason && (
+                          <span className="text-xs text-danger-text" title={payment.rejectionReason}>
+                            Alasan: {payment.rejectionReason}
+                          </span>
+                        )}
+                      </div>
+                    </Td>
+                  </tr>
+                ))}
+              </Tbody>
+            </Table>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200 bg-gray-50">
+            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50">
               <p className="text-sm text-gray-600">
                 Menampilkan <span className="font-medium">{startItem}</span>-<span className="font-medium">{endItem}</span> dari <span className="font-medium">{total}</span> data
               </p>
@@ -412,7 +477,7 @@ export default function PaymentListTab() {
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1}
-                  className="p-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="p-2 rounded-md border border-gray-300 text-gray-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -430,9 +495,9 @@ export default function PaymentListTab() {
                       <button
                         key={p}
                         onClick={() => setPage(p)}
-                        className={`min-w-[36px] h-9 rounded-lg border text-sm font-medium ${
+                        className={`min-w-[36px] h-9 rounded-md border text-sm font-medium ${
                           p === page
-                            ? 'bg-blue-600 text-white border-blue-600'
+                            ? 'bg-primary-600 text-white border-primary-600'
                             : 'border-gray-300 text-gray-600 hover:bg-white'
                         }`}
                       >
@@ -443,7 +508,7 @@ export default function PaymentListTab() {
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
-                  className="p-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="p-2 rounded-md border border-gray-300 text-gray-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -451,120 +516,97 @@ export default function PaymentListTab() {
             </div>
           </>
         )}
-      </div>
+      </Card>
 
       {/* Upload Bukti Modal */}
-      {uploadModal.show && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Upload Bukti Pembayaran</h3>
-              <button onClick={() => { setUploadModal({ show: false, paymentId: null }); setUploadFile(null); }} className="p-1 text-gray-400 hover:text-gray-600 rounded">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Pilih file bukti pembayaran</label>
-                <input
-                  type="file"
-                  accept="image/*,.pdf"
-                  onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                />
-                <p className="mt-1 text-xs text-gray-500">Format: JPG, PNG, PDF. Maks 5MB</p>
-              </div>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => { setUploadModal({ show: false, paymentId: null }); setUploadFile(null); }}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
-                >
-                  Batal
-                </button>
-                <button
-                  onClick={handleUpload}
-                  disabled={!uploadFile || uploading}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium"
-                >
-                  {uploading ? 'Mengupload...' : 'Upload & Bayar'}
-                </button>
-              </div>
-            </div>
+      <Modal
+        open={uploadModal.show}
+        onClose={() => { setUploadModal({ show: false, paymentId: null }); setUploadFile(null); }}
+        title="Upload Bukti Pembayaran"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Pilih file bukti pembayaran</label>
+            <input
+              type="file"
+              accept="image/*,.pdf"
+              onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+            />
+            <p className="mt-1 text-xs text-gray-500">Format: JPG, PNG, PDF. Maks 5MB</p>
+          </div>
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={() => { setUploadModal({ show: false, paymentId: null }); setUploadFile(null); }}
+            >
+              Batal
+            </Button>
+            <Button className="flex-1" onClick={handleUpload} disabled={!uploadFile || uploading}>
+              {uploading ? 'Mengupload...' : 'Upload & Bayar'}
+            </Button>
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* Verify Modal */}
-      {verifyModal.show && verifyModal.payment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Verifikasi Pembayaran</h3>
-              <button onClick={() => { setVerifyModal({ show: false, payment: null }); setRejectReason(''); }} className="p-1 text-gray-400 hover:text-gray-600 rounded">
-                <X className="w-5 h-5" />
-              </button>
+      <Modal
+        open={verifyModal.show && !!verifyModal.payment}
+        onClose={() => { setVerifyModal({ show: false, payment: null }); setRejectReason(''); }}
+        title="Verifikasi Pembayaran"
+      >
+        {verifyModal.payment && (
+          <div className="space-y-4">
+            <div className="bg-gray-50 rounded-md p-4 space-y-2">
+              <p className="text-sm"><strong>Warga:</strong> {verifyModal.payment.citizenName}</p>
+              <p className="text-sm"><strong>Jenis:</strong> {verifyModal.payment.iuranTypeName}</p>
+              <p className="text-sm"><strong>Jumlah:</strong> {formatCurrency(verifyModal.payment.jumlah)}</p>
+              <p className="text-sm"><strong>Periode:</strong> {MONTHS.find((m) => m.value === verifyModal.payment.bulan)?.label}/{verifyModal.payment.tahun}</p>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                <p className="text-sm"><strong>Warga:</strong> {verifyModal.payment.citizenName}</p>
-                <p className="text-sm"><strong>Jenis:</strong> {verifyModal.payment.iuranTypeName}</p>
-                <p className="text-sm"><strong>Jumlah:</strong> {formatCurrency(verifyModal.payment.jumlah)}</p>
-                <p className="text-sm"><strong>Periode:</strong> {MONTHS.find((m) => m.value === verifyModal.payment.bulan)?.label}/{verifyModal.payment.tahun}</p>
-              </div>
 
-              {verifyModal.payment.buktiBayarUrl && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Bukti Pembayaran:</label>
-                  <img
-                    src={`${apiBaseUrl}${verifyModal.payment.buktiBayarUrl}`}
-                    alt="Bukti bayar"
-                    className="w-full max-h-48 object-contain rounded-lg border border-gray-200 cursor-pointer"
-                    onClick={() => setPreviewUrl(`${apiBaseUrl}${verifyModal.payment.buktiBayarUrl}`)}
-                  />
-                </div>
-              )}
-
+            {verifyModal.payment.buktiBayarUrl && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Alasan Penolakan (jika ditolak)</label>
-                <textarea
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                  rows={2}
-                  placeholder="Opsional, isi jika menolak..."
+                <label className="block text-sm font-medium text-gray-700 mb-2">Bukti Pembayaran:</label>
+                <img
+                  src={resolveFileUrl(verifyModal.payment.buktiBayarUrl)}
+                  alt="Bukti bayar"
+                  className="w-full max-h-48 object-contain rounded-md border border-gray-200 cursor-pointer"
+                  onClick={() => setPreviewUrl(resolveFileUrl(verifyModal.payment.buktiBayarUrl))}
                 />
               </div>
+            )}
 
-              <div className="flex gap-3">
-                <button
-                  onClick={() => handleVerify('Ditolak')}
-                  disabled={verifying}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 text-sm font-medium"
-                >
-                  Tolak
-                </button>
-                <button
-                  onClick={() => handleVerify('Lunas')}
-                  disabled={verifying}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm font-medium"
-                >
-                  {verifying ? 'Memproses...' : 'Terima (Lunas)'}
-                </button>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Alasan Penolakan (jika ditolak)</label>
+              <Textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                rows={2}
+                placeholder="Opsional, isi jika menolak..."
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <Button variant="danger" className="flex-1" onClick={() => handleVerify('Ditolak')} disabled={verifying}>
+                Tolak
+              </Button>
+              <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700" onClick={() => handleVerify('Lunas')} disabled={verifying}>
+                {verifying ? 'Memproses...' : 'Terima (Lunas)'}
+              </Button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       {/* Preview Bukti Modal */}
       {previewUrl && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 z-[60] flex items-center justify-center p-4" onClick={() => setPreviewUrl(null)}>
+        <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4" onClick={() => setPreviewUrl(null)}>
           <div className="relative max-w-3xl max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setPreviewUrl(null)} className="absolute -top-3 -right-3 p-1.5 bg-white rounded-full shadow-lg text-gray-600 hover:text-gray-800">
+            <button onClick={() => setPreviewUrl(null)} className="absolute -top-3 -right-3 p-1.5 bg-white rounded-full border border-gray-200 text-gray-600 hover:text-gray-800">
               <X className="w-5 h-5" />
             </button>
-            <img src={previewUrl} alt="Preview bukti" className="max-w-full max-h-[85vh] rounded-lg shadow-xl" />
+            <img src={previewUrl} alt="Preview bukti" className="max-w-full max-h-[85vh] rounded-md" />
           </div>
         </div>
       )}

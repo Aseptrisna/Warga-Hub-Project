@@ -7,6 +7,7 @@ import { Role } from '../../common/enums/role.enum';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { getRegionScope } from '../../common/helpers/region-scope.helper';
+import { CustomRolesService } from '../custom-roles/custom-roles.service';
 
 const PLATFORM_ROLES = [Role.SUPER_ADMIN, Role.ADMIN_PLATFORM];
 
@@ -25,6 +26,7 @@ export class UsersService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Citizen.name) private citizenModel: Model<Citizen>,
+    private readonly customRolesService: CustomRolesService,
   ) {}
 
   async create(dto: CreateUserDto, currentUser?: any) {
@@ -33,13 +35,15 @@ export class UsersService {
       throw new BadRequestException('Email sudah terdaftar');
     }
 
-    // AdminDesa scope enforcement
+    // AdminDesa scope enforcement (custom roles are SuperAdmin/AdminPlatform-only for now)
     if (currentUser?.role === Role.ADMIN_DESA) {
       if (!ADMIN_DESA_MANAGEABLE_ROLES.includes(dto.role as Role)) {
         throw new ForbiddenException('Anda tidak dapat membuat user dengan role tersebut');
       }
       // Force desa to admin's desa
       dto.desa = currentUser.desa;
+    } else if (!(await this.customRolesService.isValidRoleCode(dto.role))) {
+      throw new BadRequestException('Role tidak valid');
     }
 
     const user = new this.userModel({
@@ -282,7 +286,10 @@ export class UsersService {
     return { message: 'User berhasil diperbarui', data: user };
   }
 
-  async changeRole(id: string, role: Role) {
+  async changeRole(id: string, role: string) {
+    if (!(await this.customRolesService.isValidRoleCode(role))) {
+      throw new BadRequestException('Role tidak valid');
+    }
     const user = await this.userModel.findOne({ _id: id });
     if (!user) throw new NotFoundException('User tidak ditemukan');
     user.role = role;

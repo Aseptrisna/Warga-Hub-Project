@@ -1,14 +1,18 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Notification } from './schemas/notification.schema';
 import { User } from '../users/schemas/user.schema';
+import { EmailService } from '../../common/services/email.service';
 
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
+
   constructor(
     @InjectModel(Notification.name) private notificationModel: Model<Notification>,
     @InjectModel(User.name) private userModel: Model<User>,
+    private readonly emailService: EmailService,
   ) {}
 
   async create(data: {
@@ -19,10 +23,28 @@ export class NotificationsService {
     module?: string;
     referenceId?: string;
     referenceUrl?: string;
+    sendEmail?: boolean;
   }) {
-    const notification = new this.notificationModel(data);
+    const { sendEmail, ...notificationData } = data;
+    const notification = new this.notificationModel(notificationData);
     await notification.save();
+
+    if (sendEmail) {
+      this.emailNotification(data.userId, data).catch((err) =>
+        this.logger.error('Failed to email notification', err),
+      );
+    }
+
     return notification;
+  }
+
+  private async emailNotification(
+    userId: string,
+    data: { title: string; message: string; referenceUrl?: string },
+  ) {
+    const user = await this.userModel.findById(userId).select('email name').lean();
+    if (!user?.email) return;
+    await this.emailService.sendNotificationEmail(user.email, user.name, data);
   }
 
   async findAllForUser(userId: string, query?: any) {

@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Region, RegionDocument, RegionType } from './schemas/region.schema';
 import { CreateRegionDto } from './dto/create-region.dto';
+import { UpdateDesaLandingDto } from './dto/update-desa-landing.dto';
 import { UpdateRegionDto } from './dto/update-region.dto';
 import { Role } from '../../common/enums/role.enum';
 
@@ -270,7 +271,7 @@ export class RegionsService {
     return region;
   }
 
-  async updateMyDesaLanding(body: any, user: any): Promise<RegionDocument> {
+  async updateMyDesaLanding(body: UpdateDesaLandingDto, user: any): Promise<RegionDocument> {
     const region = await this.getMyDesa(user);
     region.landingConfig = {
       ...(region.landingConfig || {}),
@@ -283,7 +284,7 @@ export class RegionsService {
   async uploadDesaImage(user: any, field: 'logoUrl' | 'bannerUrl', file: Express.Multer.File): Promise<RegionDocument> {
     if (!file) throw new BadRequestException('File tidak ditemukan');
     const region = await this.getMyDesa(user);
-    (region as any)[field] = `/uploads/regions/${file.filename}`;
+    (region as any)[field] = (file as any).location;
     await region.save();
     return region;
   }

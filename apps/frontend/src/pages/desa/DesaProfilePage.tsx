@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { regionsService, Region } from '../../services/regions.service';
+import { resolveFileUrl } from '../../utils/file-url';
 import {
   Building, Save, Loader2, Upload, MapPin, Phone, Mail, User, Image,
 } from 'lucide-react';
@@ -82,7 +83,6 @@ export default function DesaProfilePage() {
     );
   }
 
-  const apiBase = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -111,7 +111,7 @@ export default function DesaProfilePage() {
             <label className="block text-sm font-medium text-gray-700 mb-2">Logo Desa</label>
             <div className="flex items-center gap-4">
               {region?.logoUrl ? (
-                <img src={`${apiBase}${region.logoUrl}`} alt="Logo" className="w-16 h-16 rounded-xl object-cover border" />
+                <img src={resolveFileUrl(region.logoUrl)} alt="Logo" className="w-16 h-16 rounded-xl object-cover border" />
               ) : (
                 <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center">
                   <Image className="w-6 h-6 text-gray-400" />
@@ -127,7 +127,7 @@ export default function DesaProfilePage() {
             <label className="block text-sm font-medium text-gray-700 mb-2">Banner Desa</label>
             <div className="flex items-center gap-4">
               {region?.bannerUrl ? (
-                <img src={`${apiBase}${region.bannerUrl}`} alt="Banner" className="w-24 h-16 rounded-xl object-cover border" />
+                <img src={resolveFileUrl(region.bannerUrl)} alt="Banner" className="w-24 h-16 rounded-xl object-cover border" />
               ) : (
                 <div className="w-24 h-16 rounded-xl bg-gray-100 flex items-center justify-center">
                   <Image className="w-6 h-6 text-gray-400" />

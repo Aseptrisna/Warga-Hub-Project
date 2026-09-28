@@ -10,7 +10,6 @@ import { Citizen, CitizenSchema } from '../citizens/schemas/citizen.schema';
 import { Region, RegionSchema } from '../regions/schemas/region.schema';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
-import { EmailService } from '../../common/services/email.service';
 
 @Module({
   imports: [
@@ -32,7 +31,7 @@ import { EmailService } from '../../common/services/email.service';
     ]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, LocalStrategy, EmailService],
+  providers: [AuthService, JwtStrategy, LocalStrategy],
   exports: [AuthService],
 })
 export class AuthModule {}

@@ -15,23 +15,16 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { RegionsService } from './regions.service';
 import { CreateRegionDto } from './dto/create-region.dto';
 import { UpdateRegionDto } from './dto/update-region.dto';
+import { UpdateDesaLandingDto } from './dto/update-desa-landing.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/enums/role.enum';
 import { RegionType } from './schemas/region.schema';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { s3Storage } from '../../common/services/s3-storage';
 
-const uploadStorage = diskStorage({
-  destination: './uploads/regions',
-  filename: (_req, file, cb) => {
-    const uniqueName = `${uuidv4()}${extname(file.originalname)}`;
-    cb(null, uniqueName);
-  },
-});
+const uploadStorage = s3Storage('regions');
 
 @Controller('regions')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -54,8 +47,8 @@ export class RegionsController {
 
   @Patch('my-desa/landing')
   @Roles(Role.ADMIN_DESA)
-  updateMyDesaLanding(@Body() body: any, @CurrentUser() user: any) {
-    return this.regionsService.updateMyDesaLanding(body, user);
+  updateMyDesaLanding(@Body() dto: UpdateDesaLandingDto, @CurrentUser() user: any) {
+    return this.regionsService.updateMyDesaLanding(dto, user);
   }
 
   @Post('my-desa/logo')

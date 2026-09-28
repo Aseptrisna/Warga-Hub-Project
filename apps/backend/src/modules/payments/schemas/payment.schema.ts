@@ -91,6 +91,28 @@ export class Payment extends BaseSchema {
 
   @Prop()
   createdByName: string;
+
+  // QRIS payment gateway integration (see PaymentGatewayService)
+  @Prop()
+  qrisPaymentId?: string;
+
+  @Prop()
+  qrisPaymentLinkUrl?: string;
+
+  @Prop({ enum: ['pending', 'completed', 'failed', 'expired'] })
+  qrisStatus?: string;
+
+  @Prop()
+  qrisFee?: number;
+
+  @Prop()
+  qrisNetAmount?: number;
+
+  @Prop()
+  qrisExpiresAt?: Date;
+
+  @Prop()
+  lastReminderSentAt?: Date;
 }
 
 export const PaymentSchema = SchemaFactory.createForClass(Payment);

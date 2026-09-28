@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Citizen } from './schemas/citizen.schema';
@@ -13,6 +13,8 @@ const PLATFORM_ROLES = [Role.SUPER_ADMIN, Role.ADMIN_PLATFORM];
 
 @Injectable()
 export class CitizensService {
+  private readonly logger = new Logger(CitizensService.name);
+
   constructor(
     @InjectModel(Citizen.name) private citizenModel: Model<Citizen>,
     private readonly auditService: AuditService,
@@ -436,6 +438,11 @@ export class CitizensService {
 
     const results = { imported: 0, skipped: 0, errors: [] as string[] };
 
+    // First pass: parse every row and collect all NIKs so existence can be
+    // checked with one batched query instead of one findOne per row.
+    interface ParsedRow { rowNum: number; nik: string; namaLengkap: string; citizenData: any }
+    const parsedRows: ParsedRow[] = [];
+
     for (let rowNum = 2; rowNum <= sheet.rowCount; rowNum++) {
       const row = sheet.getRow(rowNum);
       if (!row.hasValues) continue;
@@ -457,65 +464,94 @@ export class CitizensService {
         continue;
       }
 
-      // Check if NIK already exists
-      const existing = await this.citizenModel.findOne({ nik });
-      if (existing) {
-        results.errors.push(`Baris ${rowNum}: NIK ${nik} sudah terdaftar (${existing.namaLengkap})`);
+      const citizenData: any = {
+        nik,
+        namaLengkap,
+        noKk: getCellValue('noKk') || nik,
+        jenisKelamin: getCellValue('jenisKelamin') || 'Laki-laki',
+        tempatLahir: getCellValue('tempatLahir') || '-',
+        tanggalLahir: getCellValue('tanggalLahir') ? new Date(getCellValue('tanggalLahir')) : new Date('1990-01-01'),
+        agama: getCellValue('agama') || 'Islam',
+        pendidikan: getCellValue('pendidikan') || 'SMA',
+        pekerjaan: getCellValue('pekerjaan') || '',
+        statusPerkawinan: getCellValue('statusPerkawinan') || 'Belum Kawin',
+        statusHubunganDalamKeluarga: getCellValue('statusHubunganDalamKeluarga') || 'Kepala Keluarga',
+        namaAyah: getCellValue('namaAyah') || '',
+        namaIbu: getCellValue('namaIbu') || '',
+        alamat: getCellValue('alamat') || '-',
+        rt: getCellValue('rt') || scope.rt || '001',
+        rw: getCellValue('rw') || scope.rw || '001',
+        desa: getCellValue('desa') || scope.desa || '-',
+        kecamatan: getCellValue('kecamatan') || '',
+        kabupaten: getCellValue('kabupaten') || '',
+        provinsi: getCellValue('provinsi') || '',
+        kodePos: getCellValue('kodePos') || '',
+        noTelp: getCellValue('noTelp') || '',
+        email: getCellValue('email') || '',
+        kewarganegaraan: getCellValue('kewarganegaraan') || 'WNI',
+        golonganDarah: getCellValue('golonganDarah') || '',
+        npwp: getCellValue('npwp') || '',
+        noBpjsKesehatan: getCellValue('noBpjsKesehatan') || '',
+        noBpjsKetenagakerjaan: getCellValue('noBpjsKetenagakerjaan') || '',
+        nomorAktaLahir: getCellValue('nomorAktaLahir') || '',
+        statusKependudukan: getCellValue('statusKependudukan') || 'Aktif',
+      };
+
+      parsedRows.push({ rowNum, nik, namaLengkap, citizenData });
+    }
+
+    // Batch-check existing NIKs (both already in DB, and duplicated within the file).
+    const allNiks = parsedRows.map((r) => r.nik);
+    const existingCitizens: any[] = allNiks.length
+      ? await this.citizenModel.find({ nik: { $in: allNiks } }).select('nik namaLengkap').lean().exec()
+      : [];
+    const existingNikMap = new Map(existingCitizens.map((c) => [c.nik, c.namaLengkap]));
+    const seenInFile = new Set<string>();
+
+    const toInsert: any[] = [];
+
+    for (const { rowNum, nik, namaLengkap, citizenData } of parsedRows) {
+      const existingName = existingNikMap.get(nik);
+      if (existingName) {
+        results.errors.push(`Baris ${rowNum}: NIK ${nik} sudah terdaftar (${existingName})`);
         results.skipped++;
         continue;
       }
-
-      try {
-        const citizenData: any = {
-          nik,
-          namaLengkap,
-          noKk: getCellValue('noKk') || nik,
-          jenisKelamin: getCellValue('jenisKelamin') || 'Laki-laki',
-          tempatLahir: getCellValue('tempatLahir') || '-',
-          tanggalLahir: getCellValue('tanggalLahir') ? new Date(getCellValue('tanggalLahir')) : new Date('1990-01-01'),
-          agama: getCellValue('agama') || 'Islam',
-          pendidikan: getCellValue('pendidikan') || 'SMA',
-          pekerjaan: getCellValue('pekerjaan') || '',
-          statusPerkawinan: getCellValue('statusPerkawinan') || 'Belum Kawin',
-          statusHubunganDalamKeluarga: getCellValue('statusHubunganDalamKeluarga') || 'Kepala Keluarga',
-          namaAyah: getCellValue('namaAyah') || '',
-          namaIbu: getCellValue('namaIbu') || '',
-          alamat: getCellValue('alamat') || '-',
-          rt: getCellValue('rt') || scope.rt || '001',
-          rw: getCellValue('rw') || scope.rw || '001',
-          desa: getCellValue('desa') || scope.desa || '-',
-          kecamatan: getCellValue('kecamatan') || '',
-          kabupaten: getCellValue('kabupaten') || '',
-          provinsi: getCellValue('provinsi') || '',
-          kodePos: getCellValue('kodePos') || '',
-          noTelp: getCellValue('noTelp') || '',
-          email: getCellValue('email') || '',
-          kewarganegaraan: getCellValue('kewarganegaraan') || 'WNI',
-          golonganDarah: getCellValue('golonganDarah') || '',
-          npwp: getCellValue('npwp') || '',
-          noBpjsKesehatan: getCellValue('noBpjsKesehatan') || '',
-          noBpjsKetenagakerjaan: getCellValue('noBpjsKetenagakerjaan') || '',
-          nomorAktaLahir: getCellValue('nomorAktaLahir') || '',
-          statusKependudukan: getCellValue('statusKependudukan') || 'Aktif',
-        };
-
-        // Scope validation for non-platform users
-        if (user && !PLATFORM_ROLES.includes(user.role)) {
-          try {
-            this.validateCitizenScope(citizenData, user);
-          } catch {
-            results.errors.push(`Baris ${rowNum}: Warga ${namaLengkap} di luar wilayah Anda`);
-            results.skipped++;
-            continue;
-          }
-        }
-
-        const citizen = new this.citizenModel(citizenData);
-        await citizen.save();
-        results.imported++;
-      } catch (err: any) {
-        results.errors.push(`Baris ${rowNum}: ${err.message}`);
+      if (seenInFile.has(nik)) {
+        results.errors.push(`Baris ${rowNum}: NIK ${nik} duplikat di dalam file`);
         results.skipped++;
+        continue;
+      }
+      seenInFile.add(nik);
+
+      // Scope validation for non-platform users
+      if (user && !PLATFORM_ROLES.includes(user.role)) {
+        try {
+          this.validateCitizenScope(citizenData, user);
+        } catch (err) {
+          this.logger.warn(`Import baris ${rowNum} (${namaLengkap}) di luar wilayah: ${(err as Error).message}`);
+          results.errors.push(`Baris ${rowNum}: Warga ${namaLengkap} di luar wilayah Anda`);
+          results.skipped++;
+          continue;
+        }
+      }
+
+      toInsert.push(citizenData);
+    }
+
+    if (toInsert.length > 0) {
+      try {
+        const inserted = await this.citizenModel.insertMany(toInsert, { ordered: false });
+        results.imported += inserted.length;
+      } catch (err: any) {
+        // insertMany with ordered:false still inserts the valid docs and
+        // reports failures for the rest (e.g. a race on a unique index).
+        const insertedCount = err?.insertedDocs?.length ?? err?.result?.result?.nInserted ?? 0;
+        results.imported += insertedCount;
+        const failedCount = toInsert.length - insertedCount;
+        results.skipped += failedCount;
+        this.logger.error(`Bulk insert citizens: ${failedCount} rows failed`, err);
+        results.errors.push(`${failedCount} baris gagal disimpan (lihat log server untuk detail)`);
       }
     }
 

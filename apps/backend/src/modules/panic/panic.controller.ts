@@ -4,10 +4,9 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { s3Storage } from '../../common/services/s3-storage';
 import { PanicService } from './panic.service';
+import { CreatePanicDto } from './dto/create-panic.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -15,12 +14,7 @@ import { Role } from '../../common/enums/role.enum';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { getRegionScope } from '../../common/helpers/region-scope.helper';
 
-const panicStorage = diskStorage({
-  destination: './uploads/panic',
-  filename: (_req, file, cb) => {
-    cb(null, `panic-${uuidv4()}${extname(file.originalname)}`);
-  },
-});
+const panicStorage = s3Storage('panic');
 
 const imageFilter = (_req: any, file: any, cb: any) => {
   if (file.mimetype.match(/\/(jpg|jpeg|png|webp)$/)) {
@@ -53,12 +47,12 @@ export class PanicController {
   )
   create(
     @UploadedFile() file: Express.Multer.File,
-    @Body() data: any,
+    @Body() data: CreatePanicDto,
     @CurrentUser() user: any,
   ) {
-    const fotoUrl = file ? `/uploads/panic/${file.filename}` : undefined;
+    const fotoUrl = file ? (file as any).location : undefined;
     // Parse lokasi if it's a JSON string (from FormData)
-    let lokasi = data.lokasi;
+    let lokasi: any = data.lokasi;
     if (typeof lokasi === 'string') {
       try {
         lokasi = JSON.parse(lokasi);

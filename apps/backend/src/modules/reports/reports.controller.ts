@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ReportsService } from './reports.service';
+import { CreateReportDto } from './dto/create-report.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -21,8 +22,8 @@ export class ReportsController {
   }
 
   @Post()
-  create(@Body() data: any, @CurrentUser() user: any) {
-    return this.service.create(data, user.id, user.name);
+  create(@Body() dto: CreateReportDto, @CurrentUser() user: any) {
+    return this.service.create(dto, user.id, user.name);
   }
 
   @Get()

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Letter, LetterDocument, LetterStatus } from './schemas/letter.schema';
@@ -13,6 +13,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class LettersService {
+  private readonly logger = new Logger(LettersService.name);
+
   constructor(
     @InjectModel(Letter.name) private letterModel: Model<LetterDocument>,
     @InjectModel(LetterTemplate.name) private templateModel: Model<LetterTemplateDocument>,
@@ -91,7 +93,7 @@ export class LettersService {
         referenceId: letter._id,
         referenceUrl: `/letters/${letter._id}`,
       },
-    );
+    ).catch((err) => this.logger.error('Failed to notify RT/RW of new letter request', err));
 
     return letter;
   }
@@ -200,7 +202,7 @@ export class LettersService {
         referenceId: letter._id,
         referenceUrl: `/letters/${letter._id}`,
       },
-    );
+    ).catch((err) => this.logger.error('Failed to notify RW of letter pending approval', err));
 
     return letter;
   }
@@ -247,7 +249,7 @@ export class LettersService {
         referenceId: letter._id,
         referenceUrl: `/letters/${letter._id}`,
       },
-    );
+    ).catch((err) => this.logger.error('Failed to notify Desa of letter pending approval', err));
 
     return letter;
   }
@@ -292,7 +294,7 @@ export class LettersService {
       module: 'letters',
       referenceId: letter._id,
       referenceUrl: `/letters/${letter._id}`,
-    });
+    }).catch((err) => this.logger.error('Failed to notify requester of letter approval', err));
 
     // Generate PDF with QR code
     await this.generatePDF(letter._id);
@@ -339,7 +341,7 @@ export class LettersService {
       module: 'letters',
       referenceId: letter._id,
       referenceUrl: `/letters/${letter._id}`,
-    });
+    }).catch((err) => this.logger.error('Failed to notify requester of letter rejection', err));
 
     return letter;
   }

@@ -142,6 +142,11 @@ export const menuPermissions: MenuPermission[] = [
     allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_PLATFORM, Role.ADMIN_DESA],
   },
   {
+    // Manajemen Role: platform-level, tidak per-desa
+    path: '/admin/roles',
+    allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_PLATFORM],
+  },
+  {
     // Profil Desa: AdminDesa only
     path: '/desa/profile',
     allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_PLATFORM, Role.ADMIN_DESA],

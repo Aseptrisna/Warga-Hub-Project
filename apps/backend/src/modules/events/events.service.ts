@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Event, EventStatus } from './schemas/event.schema';
@@ -7,6 +7,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class EventsService {
+  private readonly logger = new Logger(EventsService.name);
+
   constructor(
     @InjectModel(Event.name) private eventModel: Model<Event>,
     private readonly auditService: AuditService,
@@ -43,7 +45,7 @@ export class EventsService {
         referenceId: event._id,
         referenceUrl: `/events/${event._id}`,
       },
-    );
+    ).catch((err) => this.logger.error('Failed to notify warga of new event', err));
 
     return { message: 'Event berhasil dibuat', data: event };
   }

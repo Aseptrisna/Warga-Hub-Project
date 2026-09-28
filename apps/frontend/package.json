@@ -14,6 +14,7 @@
     "@hookform/resolvers": "^3.3.4",
     "@types/leaflet": "^1.9.21",
     "axios": "^1.6.5",
+    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.0",
     "date-fns": "^3.0.6",
     "file-saver": "^2.0.5",

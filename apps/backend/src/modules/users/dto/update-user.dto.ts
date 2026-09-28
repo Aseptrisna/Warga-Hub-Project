@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsString,
-  IsEnum,
   IsOptional,
   IsBoolean,
   MaxLength,
@@ -22,10 +21,10 @@ export class UpdateUserDto {
   @IsString()
   phone?: string;
 
-  @ApiProperty({ enum: Role, required: false })
+  @ApiProperty({ example: Role.WARGA, required: false, description: 'Built-in Role enum value, or a custom role code' })
   @IsOptional()
-  @IsEnum(Role, { message: 'Role tidak valid' })
-  role?: Role;
+  @IsString()
+  role?: string;
 
   @ApiProperty({ example: 'Desa Sukamaju', required: false })
   @IsOptional()

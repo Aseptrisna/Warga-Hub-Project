@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Report, ReportStatus } from './schemas/report.schema';
@@ -7,6 +7,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ReportsService {
+  private readonly logger = new Logger(ReportsService.name);
+
   constructor(
     @InjectModel(Report.name) private reportModel: Model<Report>,
     private readonly auditService: AuditService,
@@ -43,7 +45,7 @@ export class ReportsService {
         referenceId: report._id,
         referenceUrl: `/reports/${report._id}`,
       },
-    );
+    ).catch((err) => this.logger.error('Failed to notify RT of new report', err));
 
     return { message: 'Laporan berhasil dibuat', data: report };
   }
@@ -115,7 +117,7 @@ export class ReportsService {
         module: 'reports',
         referenceId: report._id,
         referenceUrl: `/reports/${report._id}`,
-      });
+      }).catch((err) => this.logger.error('Failed to notify reporter of report response', err));
     }
 
     return { message: 'Status laporan diperbarui', data: report };
