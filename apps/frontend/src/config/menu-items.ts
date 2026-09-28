@@ -18,6 +18,8 @@ export const MENU_ITEMS: MenuItemConfig[] = [
   { name: 'Buku Tamu', path: '/guestbook' },
   { name: 'Patroli Ronda', path: '/patrol' },
   { name: 'Pengumuman', path: '/announcements' },
+  { name: 'Kicau Desa', path: '/kicau' },
+  { name: 'UMKM Desa', path: '/umkm' },
   { name: 'Laporan', path: '/reports' },
   { name: 'Event', path: '/events' },
   { name: 'Panic Button', path: '/panic' },

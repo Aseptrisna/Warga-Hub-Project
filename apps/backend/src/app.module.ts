@@ -26,6 +26,8 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AuditModule } from './modules/audit/audit.module';
 import { IuranTypesModule } from './modules/iuran-types/iuran-types.module';
 import { CustomRolesModule } from './modules/custom-roles/custom-roles.module';
+import { UmkmModule } from './modules/umkm/umkm.module';
+import { KicauModule } from './modules/kicau/kicau.module';
 
 @Module({
   imports: [
@@ -67,6 +69,8 @@ import { CustomRolesModule } from './modules/custom-roles/custom-roles.module';
     NotificationsModule,
     AuditModule,
     IuranTypesModule,
+    UmkmModule,
+    KicauModule,
   ],
   controllers: [AppController],
   providers: [AppService],

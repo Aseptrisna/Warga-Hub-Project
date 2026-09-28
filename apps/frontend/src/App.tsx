@@ -33,6 +33,8 @@ import NotificationsPage from './pages/notifications/NotificationsPage';
 import AuditLogPage from './pages/audit/AuditLogPage';
 import UserManagementPage from './pages/admin/UserManagementPage';
 import RoleManagementPage from './pages/roles/RoleManagementPage';
+import UmkmPage from './pages/umkm/UmkmPage';
+import KicauDesaPage from './pages/kicau/KicauDesaPage';
 import MyProfilePage from './pages/profile/MyProfilePage';
 import WargaActivationPage from './pages/admin/WargaActivationPage';
 import DesaProfilePage from './pages/desa/DesaProfilePage';
@@ -132,6 +134,8 @@ function App() {
                   {/* Admin - User Management */}
                   <Route path="/admin/users" element={<UserManagementPage />} />
                   <Route path="/admin/roles" element={<RoleManagementPage />} />
+                  <Route path="/umkm" element={<UmkmPage />} />
+                  <Route path="/kicau" element={<KicauDesaPage />} />
 
                   {/* Admin - Warga Activation */}
                   <Route path="/admin/activations" element={<WargaActivationPage />} />

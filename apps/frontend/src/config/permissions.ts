@@ -147,6 +147,15 @@ export const menuPermissions: MenuPermission[] = [
     allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_PLATFORM],
   },
   {
+    // UMKM & Kicau: semua peran bisa lihat; approval/moderasi dicek di backend
+    path: '/umkm',
+    allowedRoles: Object.values(Role) as Role[],
+  },
+  {
+    path: '/kicau',
+    allowedRoles: Object.values(Role) as Role[],
+  },
+  {
     // Profil Desa: AdminDesa only
     path: '/desa/profile',
     allowedRoles: [Role.SUPER_ADMIN, Role.ADMIN_PLATFORM, Role.ADMIN_DESA],

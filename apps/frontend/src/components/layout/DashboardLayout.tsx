@@ -27,6 +27,8 @@ import {
   Building,
   Globe,
   ShieldCheck,
+  Store,
+  MessagesSquare,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { canAccessPath } from '../../config/permissions';
@@ -55,6 +57,8 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   '/audit-logs': ClipboardList,
   '/admin/users': UserCog,
   '/admin/roles': ShieldCheck,
+  '/umkm': Store,
+  '/kicau': MessagesSquare,
   '/settings': Settings,
 };
 
