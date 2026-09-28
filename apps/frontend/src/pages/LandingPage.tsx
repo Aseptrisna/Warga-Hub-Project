@@ -1,7 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth.store';
-import { ArrowRight, Check, Menu, X, QrCode, MapPin, FileText } from 'lucide-react';
+import { ArrowRight, Check, Menu, X, QrCode, MapPin, FileText, Sprout } from 'lucide-react';
+import {
+  HeroScene,
+  KerjaBaktiScene,
+  RondaScene,
+  UmkmScene,
+  MusyawarahScene,
+  VillageSilhouette,
+} from '../components/landing/Illustrations';
 
 const NAV = [
   { id: 'fitur', label: 'Fitur' },
@@ -17,12 +25,12 @@ function scrollTo(id: string) {
 
 function WindowFrame({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
-      <div className="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 py-2.5">
-        <span className="h-2.5 w-2.5 rounded-full bg-gray-300" />
-        <span className="h-2.5 w-2.5 rounded-full bg-gray-300" />
-        <span className="h-2.5 w-2.5 rounded-full bg-gray-300" />
-        <span className="ml-2 truncate text-xs text-gray-500">{title}</span>
+    <div className="overflow-hidden rounded-[20px] border border-desa-line bg-white shadow-lift">
+      <div className="flex items-center gap-2 border-b border-desa-line bg-desa-sand/60 px-4 py-2.5">
+        <span className="h-2.5 w-2.5 rounded-full bg-desa-clay-500/40" />
+        <span className="h-2.5 w-2.5 rounded-full bg-desa-gold/50" />
+        <span className="h-2.5 w-2.5 rounded-full bg-desa-green-500/40" />
+        <span className="ml-2 truncate text-xs text-desa-muted">{title}</span>
       </div>
       {children}
     </div>
@@ -39,9 +47,9 @@ const MATRIX = [
 
 function IuranMockup() {
   const cell = (s: string) => {
-    if (s === 'L') return <span className="inline-block rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700">Lunas</span>;
-    if (s === 'Q') return <span className="inline-block rounded border border-primary-200 bg-primary-50 px-1.5 py-0.5 text-[11px] font-medium text-primary-700">QRIS</span>;
-    return <span className="inline-block rounded border border-gray-200 bg-white px-1.5 py-0.5 text-[11px] font-medium text-gray-500">Belum</span>;
+    if (s === 'L') return <span className="inline-block rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">Lunas</span>;
+    if (s === 'Q') return <span className="inline-block rounded-full border border-primary-200 bg-primary-50 px-2 py-0.5 text-[11px] font-medium text-primary-700">QRIS</span>;
+    return <span className="inline-block rounded-full border border-desa-line bg-white px-2 py-0.5 text-[11px] font-medium text-desa-muted">Belum</span>;
   };
   return (
     <WindowFrame title="Iuran Warga · RT 03 / RW 02 · Desa Sukamaju">
@@ -52,16 +60,16 @@ function IuranMockup() {
             ['Belum bayar', '7 KK'],
             ['Via QRIS', '12 transaksi'],
           ].map(([k, v]) => (
-            <div key={k} className="rounded-md border border-gray-200 px-3 py-2">
-              <p className="text-[11px] text-gray-500">{k}</p>
-              <p className="mt-0.5 text-sm font-semibold text-gray-900">{v}</p>
+            <div key={k} className="rounded-xl border border-desa-line bg-desa-cream/60 px-3 py-2">
+              <p className="text-[11px] text-desa-muted">{k}</p>
+              <p className="mt-0.5 text-sm font-semibold text-desa-ink">{v}</p>
             </div>
           ))}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[420px] text-left text-xs">
             <thead>
-              <tr className="border-b border-gray-200 text-gray-500">
+              <tr className="border-b border-desa-line text-desa-muted">
                 <th className="py-2 pr-3 font-medium">Kepala keluarga</th>
                 <th className="py-2 pr-3 font-medium">Keamanan</th>
                 <th className="py-2 pr-3 font-medium">Sampah</th>
@@ -71,8 +79,8 @@ function IuranMockup() {
             </thead>
             <tbody>
               {MATRIX.map((r) => (
-                <tr key={r.nama} className="border-b border-gray-100 last:border-0">
-                  <td className="py-2 pr-3 text-gray-900">{r.nama}</td>
+                <tr key={r.nama} className="border-b border-desa-line/60 last:border-0">
+                  <td className="py-2 pr-3 text-desa-ink">{r.nama}</td>
                   {r.status.map((s, i) => (
                     <td key={i} className="py-2 pr-3">{cell(s)}</td>
                   ))}
@@ -97,29 +105,29 @@ function SuratMockup() {
       <div className="p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-gray-900">Siti Aminah</p>
-            <p className="text-xs text-gray-500">Diajukan dari HP · Senin, 07.52</p>
+            <p className="text-sm font-semibold text-desa-ink">Siti Aminah</p>
+            <p className="text-xs text-desa-muted">Diajukan dari HP · Senin, 07.52</p>
           </div>
-          <span className="rounded border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">Tahap 3 dari 3</span>
+          <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">Tahap 3 dari 3</span>
         </div>
         <ol className="mt-5 space-y-0">
           {steps.map((s, i) => (
             <li key={s.who} className="relative flex gap-3 pb-5 last:pb-0">
-              {i < steps.length - 1 && <span className="absolute left-[9px] top-5 h-full w-px bg-gray-200" aria-hidden />}
-              <span className={`relative mt-0.5 flex h-[19px] w-[19px] shrink-0 items-center justify-center rounded-full border ${s.done ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300 bg-white'}`}>
+              {i < steps.length - 1 && <span className="absolute left-[9px] top-5 h-full w-px bg-desa-line" aria-hidden />}
+              <span className={`relative mt-0.5 flex h-[19px] w-[19px] shrink-0 items-center justify-center rounded-full border ${s.done ? 'border-desa-green-600 bg-desa-green-600 text-white' : 'border-desa-line bg-white'}`}>
                 {s.done && <Check className="h-3 w-3" strokeWidth={3} />}
               </span>
               <div className="flex flex-1 justify-between gap-2 text-sm">
-                <span className={s.done ? 'text-gray-900' : 'text-gray-500'}>{s.who}</span>
-                <span className="text-xs text-gray-500">{s.when}</span>
+                <span className={s.done ? 'text-desa-ink' : 'text-desa-muted'}>{s.who}</span>
+                <span className="text-xs text-desa-muted">{s.when}</span>
               </div>
             </li>
           ))}
         </ol>
-        <div className="mt-5 flex items-center gap-3 rounded-md border border-dashed border-gray-300 px-3 py-2.5">
-          <FileText className="h-4 w-4 text-gray-400" />
-          <p className="flex-1 text-xs text-gray-600">PDF bertanda QR terbit otomatis setelah disetujui</p>
-          <QrCode className="h-5 w-5 text-gray-400" />
+        <div className="mt-5 flex items-center gap-3 rounded-xl border border-dashed border-desa-line px-3 py-2.5">
+          <FileText className="h-4 w-4 text-desa-muted" />
+          <p className="flex-1 text-xs text-desa-muted">PDF bertanda QR terbit otomatis setelah disetujui</p>
+          <QrCode className="h-5 w-5 text-desa-muted" />
         </div>
       </div>
     </WindowFrame>
@@ -137,20 +145,20 @@ function RondaMockup() {
     <WindowFrame title="Patroli Ronda · Malam ini · RW 02">
       <div className="p-5">
         <div className="mb-4 flex items-center justify-between">
-          <p className="text-sm font-semibold text-gray-900">3 dari 4 titik discan</p>
-          <div className="h-1.5 w-28 rounded-full bg-gray-100">
-            <div className="h-1.5 w-3/4 rounded-full bg-primary-600" />
+          <p className="text-sm font-semibold text-desa-ink">3 dari 4 titik discan</p>
+          <div className="h-1.5 w-28 rounded-full bg-desa-sand">
+            <div className="h-1.5 w-3/4 rounded-full bg-desa-green-600" />
           </div>
         </div>
-        <ul className="divide-y divide-gray-100">
+        <ul className="divide-y divide-desa-line/60">
           {logs.map(([jam, titik, petugas]) => {
             const missed = petugas === '—';
             return (
               <li key={titik} className="flex items-center gap-3 py-2.5 text-sm">
-                <span className="w-11 shrink-0 tabular-nums text-xs text-gray-500">{jam}</span>
-                <MapPin className={`h-4 w-4 shrink-0 ${missed ? 'text-gray-300' : 'text-primary-600'}`} />
-                <span className={`flex-1 ${missed ? 'text-gray-400' : 'text-gray-900'}`}>{titik}</span>
-                <span className={`text-xs ${missed ? 'text-amber-700' : 'text-gray-500'}`}>{missed ? 'Belum discan' : petugas}</span>
+                <span className="w-11 shrink-0 tabular-nums text-xs text-desa-muted">{jam}</span>
+                <MapPin className={`h-4 w-4 shrink-0 ${missed ? 'text-desa-line' : 'text-desa-green-600'}`} />
+                <span className={`flex-1 ${missed ? 'text-desa-muted/70' : 'text-desa-ink'}`}>{titik}</span>
+                <span className={`text-xs ${missed ? 'text-amber-700' : 'text-desa-muted'}`}>{missed ? 'Belum discan' : petugas}</span>
               </li>
             );
           })}
@@ -160,7 +168,16 @@ function RondaMockup() {
   );
 }
 
-/* ───────────────────────── Page ───────────────────────── */
+/* ───────────────────────── Illustrated vignettes ───────────────────────── */
+
+const VIGNETTES = [
+  { Scene: KerjaBaktiScene, caption: 'Kerja bakti akhir pekan' },
+  { Scene: RondaScene, caption: 'Ronda malam, tercatat rapi' },
+  { Scene: UmkmScene, caption: 'UMKM warga tampil ke tetangga' },
+  { Scene: MusyawarahScene, caption: 'Musyawarah di balai desa' },
+];
+
+/* ───────────────────────── Page content ───────────────────────── */
 
 const PROBLEMS = [
   {
@@ -219,6 +236,8 @@ const FEATURES = [
 
 const MORE = [
   ['Data warga & KK', 'Profil warga, kartu keluarga, dan dokumen seperti KTP, akta, dan BPJS di satu tempat.'],
+  ['UMKM desa', 'Usaha warga terdaftar, disetujui pengurus, dan tampil dengan tombol hubungi WhatsApp.'],
+  ['Kicau desa', 'Ruang bicara warga satu desa: kabar, foto, dan komentar tetangga, bukan grup WhatsApp yang ramai.'],
   ['Pengumuman & kegiatan', 'Kabar desa dan jadwal kegiatan sampai ke warga tanpa bergantung pada grup chat.'],
   ['Laporan warga', 'Keluhan jalan rusak atau lampu mati tercatat dan bisa ditindaklanjuti.'],
   ['Buku tamu', 'Tamu yang datang ke lingkungan tercatat dengan rapi.'],
@@ -249,37 +268,39 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-white text-gray-900 antialiased">
+    <div className="min-h-screen overflow-x-hidden bg-desa-cream font-jakarta text-desa-ink antialiased">
       {/* Nav */}
-      <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <Link to="/" className="flex items-center gap-2 font-semibold tracking-tight">
-            <span className="flex h-6 w-6 items-center justify-center rounded bg-gray-900 text-xs font-bold text-white">W</span>
-            WargaHub
+      <header className="sticky top-0 z-40 border-b border-desa-line bg-desa-cream/90 backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+          <Link to="/" className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-desa-green-700 text-white">
+              <Sprout className="h-4 w-4" />
+            </span>
+            <span className="font-display text-lg font-semibold tracking-tight">WargaHub</span>
           </Link>
-          <nav className="hidden items-center gap-7 md:flex" aria-label="Utama">
+          <nav className="hidden items-center gap-8 md:flex" aria-label="Utama">
             {NAV.map((n) => (
-              <button key={n.id} onClick={() => go(n.id)} className="text-sm text-gray-600 hover:text-gray-900">
+              <button key={n.id} onClick={() => go(n.id)} className="text-sm text-desa-muted hover:text-desa-ink">
                 {n.label}
               </button>
             ))}
           </nav>
           <div className="hidden items-center gap-2 md:flex">
             {isAuthenticated ? (
-              <Link to="/dashboard" className="rounded-md bg-gray-900 px-3.5 py-1.5 text-sm font-medium text-white hover:bg-gray-800">
+              <Link to="/dashboard" className="rounded-full bg-desa-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-desa-green-800">
                 Buka dasbor
               </Link>
             ) : (
               <>
-                <Link to="/login" className="rounded-md px-3 py-1.5 text-sm text-gray-700 hover:text-gray-900">Masuk</Link>
-                <Link to="/register-desa" className="rounded-md bg-gray-900 px-3.5 py-1.5 text-sm font-medium text-white hover:bg-gray-800">
+                <Link to="/login" className="rounded-full px-3.5 py-2 text-sm text-desa-ink/80 hover:text-desa-ink">Masuk</Link>
+                <Link to="/register-desa" className="rounded-full bg-desa-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-desa-green-800">
                   Daftarkan desa
                 </Link>
               </>
             )}
           </div>
           <button
-            className="-mr-2 p-2 text-gray-700 md:hidden"
+            className="-mr-2 p-2 text-desa-ink md:hidden"
             onClick={() => setMenuOpen((o) => !o)}
             aria-label={menuOpen ? 'Tutup menu' : 'Buka menu'}
             aria-expanded={menuOpen}
@@ -288,19 +309,19 @@ export default function LandingPage() {
           </button>
         </div>
         {menuOpen && (
-          <div className="border-t border-gray-200 bg-white px-4 py-3 md:hidden">
+          <div className="border-t border-desa-line bg-desa-cream px-4 py-3 md:hidden">
             {NAV.map((n) => (
-              <button key={n.id} onClick={() => go(n.id)} className="block w-full py-2 text-left text-sm text-gray-700">
+              <button key={n.id} onClick={() => go(n.id)} className="block w-full py-2 text-left text-sm text-desa-ink/80">
                 {n.label}
               </button>
             ))}
-            <div className="mt-2 flex gap-2 border-t border-gray-100 pt-3">
+            <div className="mt-2 flex gap-2 border-t border-desa-line pt-3">
               {isAuthenticated ? (
-                <Link to="/dashboard" className="flex-1 rounded-md bg-gray-900 py-2 text-center text-sm font-medium text-white">Buka dasbor</Link>
+                <Link to="/dashboard" className="flex-1 rounded-full bg-desa-green-700 py-2 text-center text-sm font-medium text-white">Buka dasbor</Link>
               ) : (
                 <>
-                  <Link to="/login" className="flex-1 rounded-md border border-gray-300 py-2 text-center text-sm text-gray-700">Masuk</Link>
-                  <Link to="/register-desa" className="flex-1 rounded-md bg-gray-900 py-2 text-center text-sm font-medium text-white">Daftarkan desa</Link>
+                  <Link to="/login" className="flex-1 rounded-full border border-desa-line py-2 text-center text-sm text-desa-ink/80">Masuk</Link>
+                  <Link to="/register-desa" className="flex-1 rounded-full bg-desa-green-700 py-2 text-center text-sm font-medium text-white">Daftarkan desa</Link>
                 </>
               )}
             </div>
@@ -310,49 +331,54 @@ export default function LandingPage() {
 
       <main>
         {/* Hero */}
-        <section className="mx-auto max-w-6xl px-4 pb-16 pt-16 sm:px-6 sm:pt-24 lg:pb-24">
-          <div className="max-w-3xl">
-            <p className="text-sm font-medium text-primary-700">Administrasi desa, RW, dan RT</p>
-            <h1 className="mt-4 text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
-              Urusan warga tidak perlu lagi dicatat di buku tulis.
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-gray-600">
-              WargaHub menyatukan data warga, surat pengantar, iuran, dan ronda dalam satu sistem
-              yang dipakai bersama oleh desa, RW, RT, dan warganya.
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link
-                to={isAuthenticated ? '/dashboard' : '/register-desa'}
-                className="inline-flex items-center justify-center gap-2 rounded-md bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
-              >
-                {isAuthenticated ? 'Buka dasbor' : 'Daftarkan desa Anda'}
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <button
-                onClick={() => scrollTo('fitur')}
-                className="inline-flex items-center justify-center rounded-md border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:border-gray-400 hover:text-gray-900"
-              >
-                Lihat fiturnya
-              </button>
+        <section className="mx-auto max-w-6xl px-4 pb-16 pt-14 sm:px-6 sm:pt-20 lg:pb-24">
+          <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-10">
+            <div className="max-w-xl">
+              <p className="text-sm font-medium tracking-wide text-desa-green-700">Administrasi desa, RW, dan RT</p>
+              <h1 className="mt-4 font-display text-4xl font-semibold leading-[1.1] tracking-tight text-desa-ink sm:text-5xl">
+                Urusan warga tidak perlu lagi dicatat di buku tulis.
+              </h1>
+              <p className="mt-6 max-w-md text-lg leading-relaxed text-desa-muted">
+                WargaHub menyatukan data warga, surat pengantar, iuran, dan ronda dalam satu sistem
+                yang dipakai bersama oleh desa, RW, RT, dan warganya.
+              </p>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Link
+                  to={isAuthenticated ? '/dashboard' : '/register-desa'}
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-desa-green-700 px-5 py-3 text-sm font-medium text-white shadow-lift hover:bg-desa-green-800"
+                >
+                  {isAuthenticated ? 'Buka dasbor' : 'Daftarkan desa Anda'}
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <button
+                  onClick={() => scrollTo('fitur')}
+                  className="inline-flex items-center justify-center rounded-full border border-desa-line px-5 py-3 text-sm font-medium text-desa-ink hover:border-desa-ink/40"
+                >
+                  Lihat fiturnya
+                </button>
+              </div>
+            </div>
+            <div className="relative">
+              <HeroScene className="w-full rounded-[28px] border border-desa-line shadow-lift" />
             </div>
           </div>
-          <div className="mt-14 lg:mt-20">
+          <div className="mt-16 lg:mt-20">
             <IuranMockup />
           </div>
         </section>
 
         {/* Problem → solution */}
-        <section className="border-y border-gray-200 bg-gray-50">
+        <section className="border-y border-desa-line bg-desa-sand/60">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-24">
-            <h2 className="max-w-2xl text-2xl font-semibold tracking-tight sm:text-3xl">
+            <h2 className="max-w-2xl font-display text-2xl font-semibold tracking-tight text-desa-ink sm:text-3xl">
               Pekerjaan yang selama ini menyita waktu pengurus.
             </h2>
-            <div className="mt-10 grid gap-px overflow-hidden rounded-lg border border-gray-200 bg-gray-200 md:grid-cols-2">
+            <div className="mt-10 grid gap-4 md:grid-cols-2">
               {PROBLEMS.map((p) => (
-                <div key={p.before} className="bg-white p-6 sm:p-7">
-                  <p className="text-sm leading-relaxed text-gray-500">{p.before}</p>
-                  <p className="mt-4 flex gap-2.5 text-[15px] leading-relaxed text-gray-900">
-                    <Check className="mt-1 h-4 w-4 shrink-0 text-primary-600" />
+                <div key={p.before} className="rounded-[20px] border border-desa-line bg-white p-6 sm:p-7">
+                  <p className="text-sm leading-relaxed text-desa-muted">{p.before}</p>
+                  <p className="mt-4 flex gap-2.5 text-[15px] leading-relaxed text-desa-ink">
+                    <Check className="mt-1 h-4 w-4 shrink-0 text-desa-green-600" />
                     {p.after}
                   </p>
                 </div>
@@ -367,12 +393,12 @@ export default function LandingPage() {
             {FEATURES.map((f, i) => (
               <div key={f.eyebrow} className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
                 <div className={i % 2 === 1 ? 'lg:order-2' : ''}>
-                  <p className="text-sm font-medium text-primary-700">{f.eyebrow}</p>
-                  <h3 className="mt-3 text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">{f.title}</h3>
+                  <p className="text-sm font-medium text-desa-green-700">{f.eyebrow}</p>
+                  <h3 className="mt-3 font-display text-2xl font-semibold leading-tight tracking-tight text-desa-ink sm:text-3xl">{f.title}</h3>
                   <ul className="mt-6 space-y-3">
                     {f.points.map((pt) => (
-                      <li key={pt} className="flex gap-3 text-[15px] text-gray-700">
-                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+                      <li key={pt} className="flex gap-3 text-[15px] text-desa-ink/80">
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-desa-muted" />
                         {pt}
                       </li>
                     ))}
@@ -383,13 +409,26 @@ export default function LandingPage() {
             ))}
           </div>
 
-          <div className="mt-24 border-t border-gray-200 pt-16">
-            <h3 className="text-xl font-semibold tracking-tight">Juga termasuk</h3>
+          {/* Illustrated vignettes */}
+          <div className="mt-24 border-t border-desa-line pt-16">
+            <h3 className="font-display text-xl font-semibold tracking-tight text-desa-ink">Dari warga, untuk warga</h3>
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {VIGNETTES.map(({ Scene, caption }) => (
+                <div key={caption} className="overflow-hidden rounded-[20px] border border-desa-line bg-white">
+                  <Scene className="aspect-[4/3] w-full" />
+                  <p className="px-4 py-3 text-sm font-medium text-desa-ink">{caption}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-16 border-t border-desa-line pt-16">
+            <h3 className="font-display text-xl font-semibold tracking-tight text-desa-ink">Juga termasuk</h3>
             <dl className="mt-8 grid gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
               {MORE.map(([t, d]) => (
                 <div key={t}>
-                  <dt className="text-sm font-semibold text-gray-900">{t}</dt>
-                  <dd className="mt-1.5 text-sm leading-relaxed text-gray-600">{d}</dd>
+                  <dt className="text-sm font-semibold text-desa-ink">{t}</dt>
+                  <dd className="mt-1.5 text-sm leading-relaxed text-desa-muted">{d}</dd>
                 </div>
               ))}
             </dl>
@@ -397,21 +436,21 @@ export default function LandingPage() {
         </section>
 
         {/* Roles */}
-        <section id="peran" className="scroll-mt-16 border-t border-gray-200 bg-gray-50">
+        <section id="peran" className="scroll-mt-16 border-t border-desa-line bg-desa-sand/60">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-24">
             <div className="grid gap-10 lg:grid-cols-3">
               <div>
-                <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Satu sistem, dengan akses sesuai jabatan.</h2>
-                <p className="mt-4 text-[15px] leading-relaxed text-gray-600">
+                <h2 className="font-display text-2xl font-semibold tracking-tight text-desa-ink sm:text-3xl">Satu sistem, dengan akses sesuai jabatan.</h2>
+                <p className="mt-4 text-[15px] leading-relaxed text-desa-muted">
                   Tersedia 16 peran perangkat desa, dari Kepala Desa sampai petugas ronda. Setiap orang
                   hanya melihat data wilayah dan menu yang menjadi tugasnya. Peran khusus juga bisa dibuat sendiri.
                 </p>
               </div>
-              <div className="grid gap-px overflow-hidden rounded-lg border border-gray-200 bg-gray-200 sm:grid-cols-2 lg:col-span-2">
+              <div className="grid gap-4 sm:grid-cols-2 lg:col-span-2">
                 {ROLES.map((r) => (
-                  <div key={r.role} className="bg-white p-6">
-                    <p className="text-sm font-semibold">{r.role}</p>
-                    <p className="mt-2 text-sm leading-relaxed text-gray-600">{r.desc}</p>
+                  <div key={r.role} className="rounded-[20px] border border-desa-line bg-white p-6">
+                    <p className="text-sm font-semibold text-desa-ink">{r.role}</p>
+                    <p className="mt-2 text-sm leading-relaxed text-desa-muted">{r.desc}</p>
                   </div>
                 ))}
               </div>
@@ -421,45 +460,48 @@ export default function LandingPage() {
 
         {/* Steps */}
         <section id="mulai" className="mx-auto max-w-6xl scroll-mt-16 px-4 py-16 sm:px-6 lg:py-24">
-          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Mulai dalam tiga langkah.</h2>
+          <h2 className="font-display text-2xl font-semibold tracking-tight text-desa-ink sm:text-3xl">Mulai dalam tiga langkah.</h2>
           <ol className="mt-10 grid gap-8 md:grid-cols-3">
             {STEPS.map(([t, d], i) => (
-              <li key={t} className="border-t border-gray-900 pt-5">
-                <span className="text-sm tabular-nums text-gray-500">0{i + 1}</span>
-                <p className="mt-2 font-semibold">{t}</p>
-                <p className="mt-2 text-sm leading-relaxed text-gray-600">{d}</p>
+              <li key={t} className="border-t-2 border-desa-green-700 pt-5">
+                <span className="text-sm tabular-nums text-desa-muted">0{i + 1}</span>
+                <p className="mt-2 font-semibold text-desa-ink">{t}</p>
+                <p className="mt-2 text-sm leading-relaxed text-desa-muted">{d}</p>
               </li>
             ))}
           </ol>
         </section>
 
         {/* Final CTA */}
-        <section className="border-t border-gray-200">
-          <div className="mx-auto flex max-w-6xl flex-col items-start gap-6 px-4 py-16 sm:px-6 md:flex-row md:items-center md:justify-between lg:py-20">
-            <div>
-              <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Siap merapikan administrasi desa Anda?</h2>
-              <p className="mt-2 text-[15px] text-gray-600">Daftarkan desa, lalu undang perangkat dan warga secara bertahap.</p>
+        <section className="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
+          <div className="relative overflow-hidden rounded-[28px] bg-desa-green-800 px-6 py-14 text-desa-cream sm:px-12 sm:py-16">
+            <div className="relative z-10 flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">Siap merapikan administrasi desa Anda?</h2>
+                <p className="mt-2 text-[15px] text-desa-cream/80">Daftarkan desa, lalu undang perangkat dan warga secara bertahap.</p>
+              </div>
+              <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+                <Link to="/register-desa" className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-medium text-desa-green-800 hover:bg-desa-cream">
+                  Daftarkan desa
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link to="/register" className="inline-flex items-center justify-center rounded-full border border-white/30 px-5 py-3 text-sm font-medium text-white hover:border-white/60">
+                  Saya warga
+                </Link>
+              </div>
             </div>
-            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-              <Link to="/register-desa" className="inline-flex items-center justify-center gap-2 rounded-md bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800">
-                Daftarkan desa
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link to="/register" className="inline-flex items-center justify-center rounded-md border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:border-gray-400">
-                Saya warga
-              </Link>
-            </div>
+            <VillageSilhouette className="pointer-events-none absolute inset-x-0 bottom-0 h-24 text-black/10" />
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-gray-200">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-sm text-gray-500 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <footer className="border-t border-desa-line">
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-sm text-desa-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <p>© {new Date().getFullYear()} WargaHub</p>
           <div className="flex gap-6">
-            <Link to="/login" className="hover:text-gray-900">Masuk</Link>
-            <Link to="/register" className="hover:text-gray-900">Daftar sebagai warga</Link>
-            <Link to="/register-desa" className="hover:text-gray-900">Daftarkan desa</Link>
+            <Link to="/login" className="hover:text-desa-ink">Masuk</Link>
+            <Link to="/register" className="hover:text-desa-ink">Daftar sebagai warga</Link>
+            <Link to="/register-desa" className="hover:text-desa-ink">Daftarkan desa</Link>
           </div>
         </div>
       </footer>

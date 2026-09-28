@@ -23,6 +23,21 @@ export default {
         warning: { bg: '#fffbeb', text: '#b45309', border: '#fde68a' },
         danger: { bg: '#fef2f2', text: '#b91c1c', border: '#fecaca' },
         info: { bg: '#eff6ff', text: '#1d4ed8', border: '#bfdbfe' },
+        // Marketing site palette (warm & local). Swap these to rebrand the landing page.
+        desa: {
+          cream: '#FAF6EE',
+          sand: '#F2EADD',
+          line: '#E6DBC8',
+          ink: '#1F1B16',
+          muted: '#6B6153',
+          green: { 50: '#EAF2EC', 100: '#D3E6D9', 500: '#3B8565', 600: '#2A6F52', 700: '#1F5A43', 800: '#174534', 900: '#10332A' },
+          clay: { 50: '#FBEEE5', 100: '#F6DCC9', 500: '#C4622D', 600: '#A94F20' },
+          gold: '#E9B44C',
+        },
+      },
+      fontFamily: {
+        display: ['Fraunces', 'Georgia', 'serif'],
+        jakarta: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
         DEFAULT: '6px',
@@ -38,6 +53,7 @@ export default {
         md: '0 1px 3px 0 rgb(0 0 0 / 0.06)',
         lg: '0 1px 3px 0 rgb(0 0 0 / 0.06)',
         xl: '0 1px 3px 0 rgb(0 0 0 / 0.06)',
+        lift: '0 24px 48px -20px rgb(31 27 22 / 0.28), 0 2px 6px -2px rgb(31 27 22 / 0.08)',
       },
     },
   },
